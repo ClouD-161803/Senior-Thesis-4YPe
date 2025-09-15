@@ -1,0 +1,152 @@
+\documentclass{article}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% PREAMBLE
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%--------------------------------------------------------------
+% Document & Font Setup
+%--------------------------------------------------------------
+\usepackage[a4paper, margin=1in]{geometry}
+\usepackage{setspace}
+\usepackage{parskip}
+%--------------------------------------------------------------
+% Common Packages
+%--------------------------------------------------------------
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{enumitem}
+\usepackage{float}
+\usepackage{placeins}
+\usepackage[dvipsnames,x11names,svgnames]{xcolor}
+\usepackage{url}
+
+%--------------------------------------------------------------
+% Math & Science Packages
+%--------------------------------------------------------------
+\usepackage{amsmath,amssymb,amsfonts,amsthm}
+\usepackage{mathtools}
+\usepackage{bbm}
+\usepackage{siunitx}
+\DeclareSIUnit{\rpm}{RPM}
+\DeclareSIUnit{\au}{AU}
+
+%--------------------------------------------------------------
+% Referencing & Hyperlinks
+%--------------------------------------------------------------
+\usepackage[backend=bibtex]{biblatex}
+\addbibresource{references.bib}
+
+\usepackage{hyperref}
+\hypersetup{
+    hidelinks,
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=red
+}
+
+%--------------------------------------------------------------
+% Headers & Footers
+%--------------------------------------------------------------
+\usepackage{fancyhdr, lastpage}
+
+\fancypagestyle{mainmatter}{
+    \fancyhf{}
+    \lhead{2025}
+    \rhead{EPSRC}
+    \cfoot{Page \thepage\ of \pageref{LastPage}}
+    \renewcommand{\headrulewidth}{0.4pt}
+    \renewcommand{\footrulewidth}{0.4pt}
+}
+
+%--------------------------------------------------------------
+% Algorithm Setup
+%--------------------------------------------------------------
+\usepackage{algorithm}
+\usepackage[noend]{algpseudocode}
+
+%--------------------------------------------------------------
+% Plots & Graphics
+%--------------------------------------------------------------
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepackage{tikz}
+
+% TikZ
+\usetikzlibrary{
+    shapes.geometric,
+    shapes.misc,
+    arrows.meta,
+    positioning,
+    matrix,
+    calc,
+    fit,
+    fadings,
+    patterns,
+    plotmarks,
+    decorations.pathmorphing
+}
+\tikzset{font={\fontsize{10pt}{12}\selectfont}}
+\tikzset{
+    startstop/.style = {rectangle, rounded corners, ...},
+    IO/.style        = {ellipse, ...},
+    arrow/.style     = {thick,->,>={Stealth}},
+    block/.style     = {rectangle, draw, ...},
+    sum/.style       = {draw, circle, ...},
+    bag/.style       = {align=left}
+}
+
+% Custom colors
+\definecolor{sandybrown}{rgb}{0.96, 0.64, 0.38}
+
+%--------------------------------------------------------------
+% Custom Commands, Environments, & Numbering
+%--------------------------------------------------------------
+\numberwithin{equation}{section}
+\numberwithin{figure}{section}
+\numberwithin{table}{section}
+\numberwithin{algorithm}{section}
+
+\newtheorem{thm}{Theorem}[section]
+\newtheorem{assumption}{Assumption}[section]
+\newtheorem{assumptionx}{Assumption}
+\renewcommand{\theassumptionx}{\Alph{assumptionx}}
+\newtheorem{certificate}{Certificate}[section]
+\newtheorem{property}{Property}[section]
+
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\newcommand{\defeq}{\vcentcolon=}
+\newcommand{\traj}{\{x(k)\}_{k=0,\dots,T}}
+\newcommand{\dgap}{d}
+\newcommand\given[1][]{\:#1\vert\:}
+
+\let\oldemptyset\emptyset
+\let\emptyset\varnothing
+
+\newcommand\blfootnote[1]{%
+  \begingroup
+  \renewcommand\thefootnote{}\footnote{#1}%
+  \addtocounter{footnote}{-1}%
+  \endgroup
+}
+
+\DeclareCiteCommand{\capcite}
+  {\usebibmacro{prenote}}
+  {\bibhyperref{\printnames{labelname} (\printfield{year})}}
+  {\multicitedelim}
+  {\usebibmacro{postnote}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% END PREAMBLE
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+\title{MAE 498 - Senior Thesis: Proposal}
+\author{Claudio Vestini}
+\date{September 2025}
+\maketitle
+
+
+\end{document}
