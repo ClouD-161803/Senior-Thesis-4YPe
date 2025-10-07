@@ -1,0 +1,13 @@
+\paragraph{Background}
+The language of mathematical optimisation has become a fundamental tool for formulating an increasing number of real-world problems, where the aim is to maximise or minimise an objective function, often subject to constraints. Whenever the problem's objective and/or the constraints depend on a set of parameters, $x$, representing variables that do not change the problem's structure but produce a specific problem instantiation, it takes the form of a parametric optimisation program. 
+
+Formally, we represent the decision variable as $z \in \mathbb{R}^n$, the parameter variable as $x \in \mathcal{X} \subset \mathbb{R}^d$, drawn from parameter space $\mathcal{X}$, the objective function as $f : \mathbb{R}^n\times\mathbb{R}^d \rightarrow \mathbb{R}$, and a constraint set as $C \subseteq \mathbb{R}^n$. The general constrained parametric optimisation problem $P(x)$ can then be formulated as:
+
+\begin{equation} \label{eq:parametric_optimisation}
+\begin{array}{ll}
+    \text{minimise}  & f(z,x) \\
+    \text{subject to} & z \in C(x).
+\end{array}
+\end{equation}
+
+The formulation in~\eqref{eq:parametric_optimisation} can be deployed in a vast number of practical applications, including (but not limited to) portfolio optimisation in finance, hyperparameter tuning in machine learning (ML) applications such as support vector machines (SVMs) or Lasso regression, and model predictive control (MPC) in control engineering. In real-time and safety-critical domains, such as driver-assistance systems, autonomous robotics, medical imaging pipelines, power grid dispatch, and aerospace guidance, it is crucial to instantiate and solve $P(x)$ rapidly and predictably, as failures can compromise finite-iteration safety or stability. In general, solutions to problem $P(x)$, denoted as $z^\star(x) \defeq \arg\min_{z \in C(x)} f(z,x)$, carry a dependency on $x$ and therefore constitute a \textit{solution map}, which can be exploited to evaluate optimal decisions through a simple function evaluation, completely bypassing the need to re-solve~\eqref{eq:parametric_optimisation} when a new (potentially unseen) $x$ is presented. This structural feature is unique to parametric programs, and is critical for applications that demand real-time or safety-critical decision-making.

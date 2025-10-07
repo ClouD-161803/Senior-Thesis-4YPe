@@ -1,0 +1,41 @@
+% Compact bibliography
+\usepackage[
+backend=biber,
+style=numeric,
+sorting=none,
+giveninits=true,
+maxbibnames=6, 
+maxcitenames=2,
+doi=false,
+isbn=false,
+url=false,
+eprint=false,
+date=year,
+in=false
+]{biblatex}
+
+\addbibresource{bibliography.bib}
+
+\renewcommand*{\bibfont}{\footnotesize}
+\setlength{\bibitemsep}{0pt}
+\setlength{\bibhang}{0pt}
+\AtEveryBibitem{%
+\clearfield{urldate}
+\clearfield{month}
+\clearfield{note}
+\clearfield{pagetotal}
+\clearlist{location}
+\clearname{translator}
+}
+% \let\oldthebibliography\thebibliography
+% \renewcommand{\thebibliography}{
+% \oldthebibliography{#1}
+% \setlength{\itemsep}{0pt}
+% \setlength{\parskip}{0pt}
+% }
+
+\DeclareCiteCommand{\capcite}
+{\usebibmacro{prenote}}
+{\bibhyperref{\printnames{labelname} (\printfield{year})}}
+{\multicitedelim}
+{\usebibmacro{postnote}}
