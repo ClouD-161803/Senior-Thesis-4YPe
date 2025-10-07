@@ -1,0 +1,137 @@
+\section{Conformal Prediction}
+\label{sec:conformal_prediction}
+To address these shortcomings, we propose leveraging Conformal Prediction (CP) as a flexible, distribution-free alternative for providing probabilistic performance guarantees of the form~\eqref{eq:probabilistic_guarantee} to parametric optimisation problems solved with first-order methods. CP is a modern, lightweight statistical tool that enables the construction of finite-sample probabilistic guarantees which hold with high confidence for any underlying parameter distribution.
+Originating from foundational works by Vovk et al.~\cite{vovk2005algorithmic, vovk2020conformal}, it provides calibrated prediction sets around performance metrics without requiring strong prior assumptions on the underlying data distribution. CP constructs sets that contain the true outcome with a pre-specified probability, leveraging the notion of nonconformity to assess the compatibility of potential predictions with observed data.
+
+Consider an abstract probability space $(\Omega, \mathcal{F}, \mathbb{P})$, where $\Omega$ denotes the sample space and $\mathbb{P}$ the probability measure defined on the $\sigma$-algebra $\mathcal{F}$, which constitutes the event space. We consider the sequence of random variables $X_1, X_2, \ldots, X_m, X_{m+1}$ taking values in a measurable space $\mathcal{X} \subseteq \Omega$, drawn from an unknown distribution $\mathbb{P}$ over $\mathcal{X}$, and impose the mild assumption of \emph{exchangeability} on variables $X_i$.
+
+\begin{definition}[Exchangeability]
+Given a finite sequence of random variables $X_1, X_2, \ldots, X_m$ defined on a common probability space, the sequence is said to be exchangeable if the joint distribution is invariant under any permutation $\pi$ of the indices $\{1, \ldots, m\}$, that is,
+\[
+(X_1, X_2, \ldots, X_m) \stackrel{d}{=} (X_{\pi(1)}, X_{\pi(2)}, \ldots, X_{\pi(m)})
+\]
+for all permutations $\pi$.
+\end{definition}
+
+Notice that the notion of exchangeability is weaker than that of independent, identically distributed (i.i.d.), as it allows for certain types of dependence among variables while preserving permutation invariance of their joint distribution.
+
+With this assumption in mind, we can define the notion of a set predictor. Denoting by $\mathbb{N}$ the set of natural numbers, a \emph{set predictor} of order $m \in \mathbb{N}$ is a measurable map $\Gamma_m : \mathcal{X}^m \to 2^\mathcal{X}$ which, given a dataset $S = \{X_1, \ldots, X_m\} \in \mathcal{X}^m$, outputs a measurable subset of $\mathcal{X}$ comprising plausible realisations for a future observation $X_{m+1}  = x \in \mathcal{X}$. We formalise the notion of measurability through the following standing assumption, which guarantees our probabilistic statements to be well-defined:
+
+\begin{assumption}[Standing Assumption]
+\label{ass:measurability}
+For any $m \in \mathbb{N}$, the set
+\[
+    \label{eq:violation_set}
+    \{(X_1, \ldots, X_m, X_{m+1}) \in \mathcal{X}^{m+1} : X_{m+1} \in \Gamma_m(X_1, \ldots, X_m)\}
+\]
+belongs to the product $\sigma$-algebra $\mathcal{F}^{m+1}$, and as such constitutes a Borel measurable subset.
+\end{assumption}
+
+The \emph{validity} of a set predictor quantifies the set $\big\{ S \cup \{x\} : x \notin \Gamma_m(S) \big\}$ by finding its coverage probability over the joint distribution $\mathbb{P}_{m+1}$ induced by $\mathbb{P}$ on $\mathcal{X}^{m+1}$:
+\begin{definition}[Conservative Validity]
+\label{def:validity}
+A set predictor $\Gamma_m$ is said to be conservatively valid at significance level $\delta \in (0,1)$ if
+\begin{equation}
+\label{eq:validity}
+\mathbb{P}_{m+1} \big\{ (X_1, \ldots, X_m, X_{m+1}) : X_{m+1} \notin \Gamma_m(X_1, \ldots, X_m) \big\} \le \delta,
+\end{equation}
+where the event is measurable under Assumption~\ref{ass:measurability}.
+\end{definition}
+The aim of CP is to provide nontrivial set predictors satisfying this property marginally over any $\mathbb{P}$, relying solely on exchangeability rather than i.i.d.\ assumptions or knowledge of $\mathbb{P}$. Central to conformal prediction is the notion of a \emph{nonconformity measure}, a function that quantifies how ``distant" each sample in the collection $S \cup \{x\}$ is from the rest. Formally, a nonconformity measure is a measurable, permutation-invariant map
+\[
+\mathcal{A} : \mathcal{X}^{m+1} \to \mathbb{R}^{m+1},
+\]
+satisfying
+\[
+\mathcal{A}(X_{\pi(1)}, \ldots, X_{\pi(m+1)}) = \mathcal{A}(X_1, \ldots, X_{m+1}).
+\]
+
+Given the calibration dataset $S$ and a candidate test point $x$, the nonconformity measure yields a collection of scores
+\[
+\mathcal{A}(S \cup \{x\}) = [R_1, \ldots, R_m, R_{m+1}]^T \in \mathbb{R}^{m+1},
+\]
+where $R_i, i=1,\ldots,m$ measures the nonconformity of $X_i$ with respect to $S \setminus \{X_i\} \cup \{x\}$, and $R_{m+1}$ assesses $x$ against $S$. We impose the following condition on the nonconformity scores for analytical tractability.
+\begin{assumption}
+\label{ass:scores}
+The scores $R_1, \ldots, R_m$ are independent and sorted in non-decreasing order with no ties: $R_1 < R_2 < \cdots < R_{m}$.
+\end{assumption}
+
+The choice of nonconformity scoring function $\mathcal{A}$ is problem-dependent, and often relies on the existence of a model to evaluate the nonconformity scores. We can make a distinction between \textit{vanilla} (or \textit{full}) CP, which involves model retraining and recomputing the entire nonconformity score vector for any unseen $x$, and \textit{split} CP, which divides the dataset $S$ into disjoint training and calibration sets, and computes the nonconformity scores given a trained model against the calibration set alone, trading off tightness in the prediction sets for computational tractability. This categorisation is sometimes referred to as inductive CP, as opposed to transductive for full CP. We will discuss both of these families in the following sections.
+
+\subsection{Vanilla (Full) Conformal Prediction}
+
+The vanilla conformal predictor constructs prediction sets through a rank-based threshold on scores, relying on score computation and ordering for the entire bag of samples and test point $S \cup \{x\}$. Denoting by $| \cdot |$ the set cardinality, we define the conformity function
+\[
+g(x; S) \defeq \frac{|\{i \in \{1, \ldots, m+1\} : R_i \ge R_{m+1}\}|}{m+1},
+\]
+which computes the quantile rank of the test score $R_{m+1}$ among all $m+1$ scores. For $\delta \in (0,1)$, the set predictor can be reformulated as:
+\begin{equation}
+\label{eq:vanilla_cp}
+\Gamma^\delta_m(X_1, \ldots, X_m) = \{ x \in \mathcal{X} : g(x; S) > \delta \}.
+\end{equation}
+Equivalently, under Assumption~\ref{ass:scores}, defining a threshold $p \defeq \lceil (1-\delta)(m+1) \rceil$, where $\lceil \cdot \rceil$ denotes the smallest integer higher than or equal to its argument, we can write:
+\begin{equation}
+\label{eq:quantile_form}
+\Gamma^\delta_m(S) = \{ x \in \mathcal{X} : R_{m+1} \le R_{p} \},
+\end{equation}
+where $R_{p}$ is the $(1-\delta)$-quantile of the empirical distribution over the discrete set $\{R_1, \ldots, R_m\}$ augmented by $+\infty$, (to handle finite-sample truncation). That is, there exists a number $p$ of nonconformity scores lower than or equal to $R_p$. This definition, coupled with exchangeability of variables $X_1, \ldots, X_m, X_{m+1}$, leads to a fundamental result for the vanilla conformal predictor:
+\begin{theorem}[Proposition 1.2~\cite{Balasubramanian2014}]
+\label{thm:vanilla_validity}
+Let $\mathcal{A}$ be a nonconformity measure satisfying Assumptions~\ref{ass:measurability} and~\ref{ass:scores}. For any $\delta \in (0,1)$, the predictor $\Gamma^\delta_m$ in \eqref{eq:vanilla_cp} is conservatively valid at level $\delta$, i.e.,
+\[
+\mathbb{P}_{m+1} \big\{ x \notin \Gamma^\delta_m(S) \big\} \le \delta.
+\]
+\end{theorem}
+The proof, which can be found in~\cite{Angelopoulos2025}, Section 3.3, exploits the uniformity of $g(x; S)$ under exchangeability. The bound is tight in the continuous limit as $m \to \infty$, attaining exact $1-\delta$ coverage asymptotically. A direct corollary of Theorem~\ref{thm:vanilla_validity} reframes validity in quantile terms:
+\begin{corollary}[Quantile Coverage]
+\label{cor:quantile}
+Fix $\delta \in (0,1)$ and let $p = \lceil (1-\delta)(m+1) \rceil$. Then,
+\[
+\mathbb{P}_{m+1} \big \{ R_{m+1} > R_p \big \} \le \delta,
+\]
+with $R_p = \mathrm{Quantile}_{1-\delta}(R_1, \ldots, R_m, +\infty)$.
+\end{corollary}
+
+Full CP can be a useful framework to implement in situations where statistical tightness is most important, and computational efficiency is not a main concern. Historically, this is the version of CP which was first developed, with split CP being later recognised as a special case. However, if the problem requires the training of a \textit{predictive model} to evaluate the nonconformity scores, the model will have to be retrained for every new test point. This can be computationally demanding, and potentially intractable in safety-critical or real-time applications. Split CP presents itself as a computationally attractive alternative.
+
+\subsection{Split Conformal Prediction}
+
+Split CP offers a numerically efficient alternative to the vanilla CP approach, eliminating the need to repeatedly retrain models. Split CP partitions the dataset $S$ into two disjoint subsets: a training set $S_T$ and a calibration set $S_C$. The training set $S_T = \{X_i : i \in \mathcal{I}_T\}$, where $|\mathcal{I}_T| = m_{T}$, is used to fit a predictive model $\hat{\mu}$, typically either via regression or classification, which maps inputs to predicted outputs. The calibration set $S_C = \{X_j : j \in \mathcal{I}_C\}$, with $|\mathcal{I}_C| = m_{C}$, serves to evaluate the nonconformity scores on data unseen during training. Notice that, within this framework, we only need to train the model $\hat{\mu}$ once. Via an abuse of notation, the nonconformity measure $\mathcal{A} : \mathcal{X}^{m_c +1} \to \mathbb{R}^{m_c +1}$ is defined using the fixed model $\hat{\mu}$, yielding scores $R_j = \mathcal{A}(S_C \cup \{X_{m+1}\}; \hat{\mu})_j$ for $j \in \mathcal{I}_C$, which quantify the incompatibility of each calibration point with the model's predictions. For a candidate test point $x \in \mathcal{X}$, the test score is $R_{m+1} = \mathcal{A}(S_C \cup \{X_{m+1}\}; \hat{\mu})_{m+1}$. Assuming the scores on $S_C \cup \{x\}$ satisfy the conditions of Assumption~\ref{ass:scores}, the split conformal predictor is given by:
+\[
+\Gamma^\delta_{m_C}(S_C) = \{ x \in \mathcal{X} : R_{m+1} \le R_p \}, \quad R_p = \mathrm{Quantile}_{1-\delta}(R_1, \ldots, R_{m_C}, +\infty)
+\]
+
+Under the exchangeability of the full dataset $S \cup \{x\}$, the split conformal predictor inherits conservative validity from the full procedure, as the calibration scores and test score are exchangeable conditional on the fixed training set $S_T$. If $S_T$ is drawn independently from $S_C \cup \{X_{m+1}\}$, exchangeability of the latter directly implies exchangeability of the scores. More generally, joint exchangeability of all $m+1$ points ensures the ranks are permutation-invariant.
+
+\begin{theorem}[Split Conformal Validity]
+\label{thm:split_validity}
+Let $\mathcal{A}(\cdot; \hat{\mu})$ be a nonconformity measure based on the model $\hat{\mu}$ trained on $S_T$, satisfying Assumptions~\ref{ass:measurability} and~\ref{ass:scores} on $S_C \cup \{x\}$. For any $\delta \in (0,1)$, the predictor $\Gamma^\delta_{m_C}$ is conservatively valid at level $\delta$, i.e.,
+\[
+\mathbb{P}_{m+1} \big\{ X_{m+1} \notin \Gamma^\delta_{m_C}(S_C) \big\} \le \delta,
+\]
+under exchangeability of $S \cup \{X_{m+1}\}$.
+\end{theorem}
+
+The proof follows from the uniformity of the rank of $R_{m+1}$ among $\{R_1, \ldots, R_{m_C}, R_{m+1}\}$ under exchangeability, analogous to Theorem~\ref{thm:vanilla_validity}; see~\cite{Angelopoulos2025} Section 3.4 for details. Asymptotically, as $m_C \to \infty$, the coverage approaches exact $1-\delta$. A quantile-based corollary holds similarly to Corollary~\ref{cor:quantile}, bounding the probability that the test score exceeds the empirical $(1-\delta)$-quantile of the calibration scores.
+
+This approach decouples training from calibration, enabling reuse of $\hat{\mu}$ for multiple test points without retraining, which is advantageous in safety-critical or real-time settings. However, the effective calibration sample size $m_C < m$ may lead to slightly wider prediction sets compared to full CP, trading statistical tightness for efficiency. The choice of $\mathcal{A}$ remains problem-specific, often expressed as a function of absolute error away from $\hat{\mu}$. To illustrate this point, we present popular applications of split CP for regression and classification tasks below.
+
+\subsubsection{Example: Regression}
+
+In regression tasks, we can structure the samples $X_i$ as feature-response pairs  $X_i = (U_i, V_i)$, where $U_i \in \mathcal{U}$ are inputs (e.g., problem parameters $x \in \mathcal{X}$) and $V_i \in \mathbb{R}$ are corresponding outputs (e.g., performance metrics $\phi(z^K(x),x)$). The model $\hat{\mu}(U_i)$ predicts $V_i$, and a natural nonconformity score is the absolute residual $R_j = |V_j - \hat{\mu}(U_j)|$ (or a function thereof) for calibration points $j \in \mathcal{I}_C$. For a test input $u$ and candidate output $v$, the test score is $R_{m+1} = |v - \hat{\mu}(u)|$.
+
+The prediction set is then
+\[
+\Gamma^\delta_{m_C}(u) = \{ v \in \mathbb{R} : |v - \hat{\mu}(u)| \le q_{1-\delta} \},
+\]
+where $q_{1-\delta}$ is the $(1-\delta)$-quantile of $\{R_j : j \in \mathcal{I}_C\} \cup \{+\infty\}$. This yields symmetric intervals around $\hat{\mu}(u)$ with guaranteed coverage at least $1-\delta$, provided exchangeability holds for the input-output pairs in $S \cup \{(u, v_{m+1})\}$.
+
+\subsubsection{Example: Classification}
+
+In classification tasks, we can structure the samples $X_i$ as feature-label pairs $X_i = (U_i, Y_i)$, where $U_i \in \mathcal{U}$ denote inputs (e.g. parametric instances $x \in \mathcal{X}$) and $Y_i \in \mathcal{Y}$ represent class labels (e.g. discretised performance assessments such as the $0-1$ error $e(x) \defeq \mathbb{I}(\phi(z^K(x),x)  \geq \epsilon)$, for some tolerance $\epsilon$, proposed in~\cite{RSBS25}). The model $\hat{p}$ can be constructed as a classifier trained on $S_T$ that outputs predicted class probabilities $\hat{p}_c(U_i)$ for each class $c \in \mathcal{Y}$. We can then formulate a nonconformity scoring function for calibration points $j \in \mathcal{I}_C$ as  $\mathcal{A}: \mathcal{X}^{m_c +1} \to \mathbb{R}^{m_c +1}$ that evaluates scores as $R_j = 1 - \hat{p}_{Y_j}(U_j)$, a measure of the model's uncertainty in the true label.
+
+For a test input $u$ and candidate label $y \in \mathcal{Y}$, the corresponding test score becomes $R_{m+1} = 1 - \hat{p}_y(u)$. The prediction set comprises all labels whose nonconformity falls below the calibration quantile:
+\[
+\Gamma^\delta_{m_C}(u) = \{ y \in \mathcal{Y} : 1 - \hat{p}_y(u) \le q_{1-\delta} \},
+\]
+where $q_{1-\delta}$ denotes the $(1-\delta)$-quantile of $\{R_j : j \in \mathcal{I}_C\} \cup \{+\infty\}$. Equivalently, this selects labels $y$ satisfying $\hat{p}_y(u) \ge 1 - q_{1-\delta}$. Under exchangeability of the pairs in $S \cup \{(u, Y_{m+1})\}$, we have conservative validity at level $\delta$.

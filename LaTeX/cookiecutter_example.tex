@@ -1,46 +1,6 @@
 \documentclass[12pt]{article}
 
-% Prevent words to overflow over the margin
-% \sloppy  % Alternative command
-\emergencystretch 3em
-
-% Use full page
-\usepackage{fullpage}
-
-% Images and plots
-\usepackage{graphicx}
-\usepackage{pgfplots}
-
-% Math
-\usepackage{amsmath,amssymb,amsthm,enumitem,mathtools}
-\renewcommand{\qedsymbol}{$\blacksquare$}
-\renewcommand\arraystretch{1.2}
-\usepackage{multirow}
-\usepackage{algorithm}% http://ctan.org/pkg/algorithms
-\usepackage[noend]{algpseudocode} % Avoid "end" and make it look cleaner
-
-% Tables
-\usepackage{csvsimple}	% reading CSV files in tables
-
-\usepackage{booktabs}   % Nicer Tables
-% avoid applying arraystretch to tables
-\let\oldtabular\tabular
-\let\endoldtabular\endtabular
-\renewenvironment{tabular}{\renewcommand\arraystretch{1.0}\oldtabular}{\endoldtabular}
-
-\usepackage{adjustbox}  % To adjust table length
-
-% Hyperreferences
-\usepackage[colorlinks=true, citecolor=cyan, linkcolor=cyan, urlcolor=cyan]{hyperref}
-
-% Acronyms
-\usepackage[xindy, acronyms]{glossaries}   % Glossaries and Acronyms
-\makeglossaries
-
-% Todos
-\newcommand{\mynote}[1]{}
-% Comment to hide notes
-\renewcommand{\mynote}[1]{\textcolor{blue}{\textbf{[Claudio Vestini: #1]}}}
+\input{LaTeX/packages/bartolomeo_packages}
 
 % Definitions
 \input{definitions.tex}

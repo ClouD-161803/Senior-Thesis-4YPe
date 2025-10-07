@@ -1,0 +1,10 @@
+\paragraph{Motivation}
+
+We refer to any mechanism to compute $z^\star(x)$ from an initial condition $z^0 \in Z$ as an \emph{algorithm}. A popular family of algorithms used to solve several classes of optimisation problems is that of \textit{first-order methods}: iterative schemes relying only on first-order derivative information (e.g., gradients or subgradients) of the functions involved. 
+These are typically denoted as:
+\begin{equation}\label{eq:first_order_method}
+  z^{k+1}(x) = T(z^k(x), x),\quad k=0,1,\dots,
+\end{equation}
+where $T: \mathbb{R}^n \times \mathbb{R}^d \rightarrow \mathbb{R}^n$ gives the gradient-dependent mapping\footnote{
+As an example, consider the \textit{projected gradient descent} algorithm, given by $T(z^k(x), x) \defeq \Pi_{C(x)}(z^k-\theta\nabla_zf(z^k,x))$, where $\nabla_zf(z^k,x)$ is the gradient in the direction of $z$, and $\theta$ is a hyperparameter representing the step size} 
+from $z^k$ to $z^{k+1}$. First-order methods offer two main advantages over other algorithm types: they are extremely cheap to implement and scale, and they are robust to the choice of initial conditions set $Z$ (also called a \textit{warm-start} set). Their usage has seen a recent resurgence in applications for both microchip-scale embedded optimisation and high-compute large-scale optimisation~\cite{StellatoPresentation2025}. They have been applied to linear (Google PDLP~\cite{googlePDLP}, NVIDIA cuOPT~\cite{NVIDIAcuopt}), quadratic (OSQP~\cite{stellato2020osqp}, ProxSuite~\cite{proxsuite}), and conic (SCS~\cite{SCSconic}) programs. They have also become ubiquitous in the ML literature~\cite{ruder2016overview}. However, they can be found to converge too slowly for certain problem instances, which represents a major setback in safety-critical applications where only a specific number of iterations of algorithm~\eqref{eq:first_order_method} can be afforded. A fundamental challenge is therefore to provide performance guarantees on the convergence behaviour of first-order methods to ensure their feasibility in practical implementations. This will be the principal focus of this Senior Thesis project.
