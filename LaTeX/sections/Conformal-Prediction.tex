@@ -117,6 +117,7 @@ The proof follows from the uniformity of the rank of $R_{m+1}$ among $\{R_1, \ld
 This approach decouples training from calibration, enabling reuse of $\hat{\mu}$ for multiple test points without retraining, which is advantageous in safety-critical or real-time settings. However, the effective calibration sample size $m_C < m$ may lead to slightly wider prediction sets compared to full CP, trading statistical tightness for efficiency. The choice of $\mathcal{A}$ remains problem-specific, often expressed as a function of absolute error away from $\hat{\mu}$. To illustrate this point, we present popular applications of split CP for regression and classification tasks below.
 
 \subsubsection{Example: Regression}
+\label{subsec:regression}
 
 In regression tasks, we can structure the samples $X_i$ as feature-response pairs  $X_i = (U_i, V_i)$, where $U_i \in \mathcal{U}$ are inputs (e.g., problem parameters $x \in \mathcal{X}$) and $V_i \in \mathbb{R}$ are corresponding outputs (e.g., performance metrics $\phi(z^K(x),x)$). The model $\hat{\mu}(U_i)$ predicts $V_i$, and a natural nonconformity score is the absolute residual $R_j = |V_j - \hat{\mu}(U_j)|$ (or a function thereof) for calibration points $j \in \mathcal{I}_C$. For a test input $u$ and candidate output $v$, the test score is $R_{m+1} = |v - \hat{\mu}(u)|$.
 

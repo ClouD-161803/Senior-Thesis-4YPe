@@ -1,34 +1,50 @@
-\subsection{Potential Application: Image Deblurring}
-
-Image deblurring addresses the recovery of a sharp image $y \in \mathbb{R}^n$ from a blurred and possibly noisy observation $x \in \mathbb{R}^n$, where $n$ represents the total number of pixels. This task is formulated as a parametric convex quadratic programme
-\begin{align}
-    \min_{y} \quad & \| A y - x \|_2^2 + \lambda \| y \|_1 \\
-    \text{s.t.} \quad & 0 \leq y \leq \mathbf{1},
-\end{align}
-with $A \in \mathbb{R}^{n \times n}$ denoting a blurring operator, typically a circulant matrix approximating a two-dimensional Gaussian convolution kernel, $\lambda > 0$ a regularisation parameter trading off data fidelity and sparsity, and $\mathbf{1}$ the all-ones vector. The parameter $x$ encapsulates the observed blurry image, while the decision variable $y$ corresponds to the sought sharp image stacked column-wise from its matrix representation. This structure aligns with the general parametric framework, where the objective $f(y, x) = \| A y - x \|_2^2 + \lambda \| y \|_1$ is smooth and strongly convex under the box constraints $C(x) = \{ y \in \mathbb{R}^n : 0 \leq y \leq \mathbf{1} \}$, ensuring a unique solution $y^*(x)$.
-
-To apply split conformal prediction in this setting, partition an exchangeable dataset $\{X_i\}_{i=1}^N$ of parameters $X_i = x_i \in \mathcal{X} \subseteq \mathbb{R}^n$, drawn from the unknown distribution $\mathbb{P}$ over $\mathcal{X}$, into a training set $S_T = \{ x_i : i \in \mathcal{I}_T \}$ of size $m_T$ and a calibration set $S_C = \{ x_j : j \in \mathcal{I}_C \}$ of size $m_C = N - m_T$. Train a predictive model $\hat{\mu}: \mathcal{U} \to \mathbb{R}$ on $S_T$ to approximate the performance metric $\phi^K: \mathcal{X} \to \mathbb{R}_+$, defined as the fixed-point residual $\phi^K(x) = \| T(y^K(x), x) - y^K(x) \|_2$ after $K$ iterations of the first-order method, where $y^{k+1}(x) = T(y^k(x), x)$ encodes the update rule with initialisation $y^0(x) \in Z \subseteq \mathbb{R}^n$ and $T: \mathbb{R}^n \times \mathcal{X} \to \mathbb{R}^n$ the associated operator.
-
-For each calibration point $x_j \in S_C$, compute the true residual $V_j = \phi^K(x_j)$ by executing the $K$-step solver, and evaluate the nonconformity score $R_j = | V_j - \hat{\mu}(U_j) |$ using the fixed model $\hat{\mu}$, where $U_j$ denotes the feature representation of $x_j$. The nonconformity measure $\mathcal{A}: \mathcal{X}^{m_C + 1} \to \mathbb{R}^{m_C + 1}$ thus yields the vector of scores $[R_1, \dots, R_{m_C}, R_{m_C + 1}]^T$ for a test parameter $X_{N+1} = (U_{m_C + 1}, V_{m_C + 1})$, with the test score $R_{m_C + 1} = | V_{m_C + 1} - \hat{\mu}(U_{m_C + 1}) |$. Under Assumption~\ref{ass:scores} on the sorted scores $R_1 < \cdots < R_{m_C}$, the split conformal predictor from \eqref{eq:quantile_form}, specialised to $\delta \in (0,1)$, constructs the prediction interval
+\subsection{Image deblurring}
+\label{subsubsec:image_deblurring}
+We use image deblurring as a compact, reproducible test case. We adopt as initial steps the procedure described in Section~\ref{sec:common_methodology}. Given a blurred and noisy image $x\in\mathbb{R}^n$ (vectorised and scaled to $[0,1]$), the decision variable $z\in\mathbb{R}^n$ represents the recovered image. We adopt the standard convex model
 \begin{equation}
-    \Gamma^\delta_{m_C}(U_{m_C + 1}) = \{ v \in \mathbb{R} : | v - \hat{\mu}(U_{m_C + 1}) | \leq q_{1 - \delta} \},
+\label{eq:deblur_model}
+\begin{aligned}
+\underset{z\in\mathbb{R}^n}{\text{minimise}}\quad 
+& \tfrac{1}{2}\,\|Az-x\|_2^2 \;+\; \rho\,\|z\|_1 \\
+\text{subject to}\quad & 0 \le z \le 1 ,
+\end{aligned}
 \end{equation}
-where $q_{1 - \delta} = \mathrm{Quantile}_{1 - \delta}( \{ R_j : j \in \mathcal{I}_C \} \cup \{ +\infty \} )$ is the empirical $(1 - \delta)$-quantile of the calibration residuals, computed as $q_{1 - \delta} = R_{(p)}$ with $p = \lceil (1 - \delta)(m_C + 1) \rceil$ and $R_{(1)} \leq \cdots \leq R_{(m_C)}$ the ordered calibration scores. By Theorem~\ref{thm:split_validity}, exchangeability of $\{ X_i \}_{i=1}^{N+1}$ ensures conservative validity:
-\begin{equation}
-    \mathbb{P}_{N+1} \big\{ \phi^K(X_{N+1}) \in \Gamma^\delta_{m_C}(U_{N+1}) \big\} \geq 1 - \delta,
-\end{equation}
-providing a distribution-free probabilistic guarantee on the performance metric directly, without reliance on structural assumptions beyond the solver's fixed-point formulation.
+where $A\in\mathbb{R}^{n\times n}$ is a (known) Gaussian–blur operator realised by a two–dimensional convolution, and $\rho>0$ balances data fidelity and sparsity. The box constraint enforces valid pixel intensities.
 
-This interval bounds $\phi^K(X_{N+1})$ symmetrically around the predicted value $\hat{\mu}(U_{N+1})$, enabling adaptive control of computational budgets: for a new blurry image $x_{N+1}$, if the lower bound $\hat{\mu}(U_{N+1}) - q_{1 - \delta} > \varepsilon$ for a tolerance $\varepsilon > 0$, allocate additional iterations beyond $K$; otherwise, accept $y^K(x_{N+1})$ as sufficiently accurate with at least $1 - \delta$ confidence.
+\emph{First–order method.} We solve \eqref{eq:deblur_model} with a projected proximal–gradient iteration (ISTA with box projection). Writing $f(z)\defeq\tfrac{1}{2}\|Az-x\|_2^2$ and $g(z)\defeq \rho\|z\|_1+\iota_{[0,1]^n}(z)$, the update is
+\[
+z_{k+1}
+= \Pi_{[0,1]^n}\!\Big(S_{\alpha\rho}\big(z_k-\alpha\nabla f(z_k)\big)\Big),
+\qquad 
+\nabla f(z)=A^\top(Az-x),
+\]
+with soft–thresholding $S_{\tau}(u)_i=\mathrm{sign}(u_i)\max\{|u_i|-\tau,0\}$ and projection $\Pi_{[0,1]^n}$ implemented by elementwise clipping. We use a cold start $z_0=0$ and a fixed stepsize $\alpha\in(0,1/L)$, where $L=\|A\|_2^2$; for a convolutional $A$, an accurate $L$ is obtained from the maximum squared magnitude of the kernel’s discrete Fourier transform.
 
-% Numerically, for images of height $H$ and width $W$ with $n = H W$, vectorise $x_j \in [0,1]^n$; construct $A$ as the Kronecker product of Toeplitz blur matrices; implement $T$ via proximal gradient steps with box projection $\Pi_{[0,1]^n}$; and sort residuals in $\mathcal{O}(m_C \log m_C)$ time to obtain $q_{1 - \delta}$. Empirical coverage on a held-out validation set $\mathcal{I}_\mathrm{val}$ verifies $\frac{1}{|\mathcal{I}_\mathrm{val}|} \sum_{j \in \mathcal{I}_\mathrm{val}} \mathbf{1}_{\{ \phi^K(x_j) \in \Gamma^\delta_{m_C}(U_j) \}} \approx 1 - \delta$, guiding $\delta$ selection.
+\emph{Performance metric.} For calibration we report a single scalar per run as required by the framework: the normalised mean–squared error (NMSE) in decibels between the iterate $z_K$ and the clean image $y^\star$ that generated $x$,
+\[
+\phi(z_K,x)\;=\;10\log_{10}\!\left(\frac{\|z_K-y^\star\|_2^2}{\|y^\star\|_2^2}\right)\;\; \text{(lower is better)}.
+\]
+PSNR can be used interchangeably; we use NMSE(dB) to remain consistent with related work.
 
-Unlike PAC-Bayes bounds in \cite{RSBS25}, which generalise expected indicator losses over learned weights via posterior complexity, this split conformal approach directly calibrates the residual metric for the fixed classical solver, yielding unconditional finite-sample guarantees without optimisation over hyperparameters or sampling from posteriors.
+\emph{Numerical set–up.} Our sample space $\mathcal{X}$ is generated from EMNIST letters ($28\times 28$ greyscale). For each clean image $y^\star\!\in[0,1]^n$ we form
+\[
+x \;=\; A y^\star + \eta,\qquad 
+A \equiv \text{conv2D}(\,\cdot\,, g_{\sigma_b}),\quad 
+\eta\sim\mathcal{N}(0,\sigma_n^2 I),
+\]
+where $g_{\sigma_b}$ is a Gaussian kernel with support size $8$ and standard deviation chosen so that $95\%$ of its mass lies within the support (we use $\sigma_b=1.6$ for $28\times 28$), $\sigma_n=10^{-3}$, and $\rho=10^{-4}$. The operator $A$ and its adjoint $A^\top$ are evaluated by FFT–based circular convolution for speed and deterministic adjointness.
 
-
-
-% \subsubsection{Application Proposal: Model Predictive Control}
-
-% Model predictive control (MPC) provides a framework for real-time control of systems subject to constraints and disturbances, formulated as a parametric optimisation problem where the current system state and disturbance environment form the problem parameters.
-
-% The use of first-order optimisation methods to solve the MPC problem under limited computational budgets motivates the need to quantify solver performance probabilities. Similar to the image deblurring setting, a dataset of parameter instances together with solver performance metrics can be assembled to train predictive models. Split CP then offers finite-sample, distribution-free guarantees on the quality of approximate MPC solutions, which can in turn provide probabilistic stability assurances and guide control decision-making under uncertainty.
+\emph{Implementation notes (Python).} This example is intended to be run directly within the two–step driver.
+\begin{itemize}[leftmargin=*, itemsep=1pt]
+\item \texttt{operators.py}: \texttt{class BlurOperator}\\
+\hspace*{1.2em}\texttt{__init__(kernel):} precompute FFT of $g_{\sigma_b}$ and its flip;\\
+\hspace*{1.2em}\texttt{matvec(z)} $\to Az$ and \texttt{rmatvec(u)} $\to A^\top u$ via FFTs.
+\item \texttt{methods.py}: \texttt{projected\_ista(A, x, rho, K, alpha)}\\
+\hspace*{1.2em}returns $\{z_k\}_{k=0}^K$ with $z_{k+1}=\Pi_{[0,1]^n}\!\big(S_{\alpha\rho}(z_k-\alpha A^\top(Az_k-x))\big)$.
+\item \texttt{metrics.py}: \texttt{nmse\_db(z, y\_true)} and \texttt{psnr(z, y\_true)}.
+\item \texttt{data.py}: EMNIST loader returning pairs $(y^\star,x)$ with controlled $(\sigma_b,\sigma_n)$.
+\item \texttt{experiment\_deblur.py}:\\
+\hspace*{1.2em}\texttt{def run(N, K, rho=1e-4, alpha=None, seed=0):}\\
+\hspace*{2.4em}sample $N$ images, build $A$, construct $x$, run ISTA for $K{+}1$ iterates from $z_0\!=\!0$, and return $\{\phi_i\}_{i=1}^N$ with $\phi_i=\mathrm{NMSE}_{\mathrm{dB}}(z_K^{(i)},y^{\star (i)})$.
+\end{itemize}
+Recommended defaults are $K\in[50,200]$ and $\alpha=0.99/L$ with $L$ estimated once from the kernel FFT. This set–up yields a lightweight, fully deterministic benchmark that cleanly instantiates the two–step pipeline without introducing extraneous notation or solver details.

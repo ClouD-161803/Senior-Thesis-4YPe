@@ -1,0 +1,65 @@
+\section{Methods}
+\label{sec:common_methodology}
+In all examples we follow the same protocol. Let $N\in\mathbb{N}$ and $K\in\mathbb{N}$ be user-specified. First, draw $N$ independent and identically distributed instances $\{x^{(i)}\}_{i=1}^{N}$ from the sample space $\mathcal{X}$. For each $x^{(i)}$, run a chosen first-order method for $K{+}1$ iterations from a cold start $z_0$ to obtain the final iterate $z_K^{(i)}$. Second, evaluate an application-specific performance metric on each run, yielding the scalar scores
+\[
+\phi_i \coloneqq \phi\bigl(z_K^{(i)},\, x^{(i)}\bigr), \qquad i=1,\dots,N,
+\]
+which form the empirical performance sample used downstream. The two steps above are summarised in Fig.~\ref{fig:cp-methodology-flow}. Following these steps, we employ problem-specific methodologies that use performance metrics $\phi_i$ and generalise results from the $N$ samples to the entire dataset $\mathcal{X}$.
+
+\begin{figure}[h]
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[
+    >=Latex,
+    node distance=8mm and 10mm,
+    every path/.style={line width=0.6pt},
+    bubble/.style={
+        draw=optimblue!65,
+        rounded corners=3pt,
+        align=center,
+        inner sep=2.5pt,
+        top color=optimblue!12,
+        bottom color=optimblue!4,
+        shading=axis,
+        minimum height=7mm
+    },
+    plate/.style={draw, rounded corners=2pt, inner sep=3pt}
+]
+    % --- nodes ---
+    \node[bubble] (x) {\scriptsize $x^{(i)} \sim \mathcal{X}$};
+
+    \node[bubble, right=12mm of x, minimum width=40mm] (solver) {\scriptsize First-order method\\[-1pt]
+        \scriptsize $z_{k+1}=T\!\left(z_k;\,x^{(i)}\right)$,\; $k=0,\dots,K$\\[-1pt]
+        \scriptsize cold start $z_0$};
+
+    \node[bubble, right=12mm of solver] (zk) {\scriptsize $z^{(i)}_{K}$};
+
+    \node[bubble, right=12mm of zk, minimum width=38mm] (metric) {\scriptsize Performance metric\\[-1pt]
+        \scriptsize $\phi_i=\phi\!\left(z^{(i)}_{K},\,x^{(i)}\right)$};
+
+    % --- arrows ---
+    \draw[->] (x) -- (solver);
+    \draw[->] (solver) -- (zk);
+    \draw[->] (zk) -- (metric);
+
+    % --- plate around step 1 (x and solver) with i=1..N label ---
+    \node[plate, fit={(x) (solver)}, label={[yshift=2.5mm]north:{\scriptsize $i=1,\dots,N$}}] (plateS1) {};
+
+    % --- Step labels with braces ---
+    % Step 1 brace above plate (x -> solver)
+    \draw[decorate, decoration={brace, amplitude=3.5pt}]
+        ($(plateS1.north west)+(0,1.5mm)$) -- ($(plateS1.north east)+(0,1.5mm)$)
+        node[midway, yshift=6mm] {\scriptsize Step 1: run $K{+}1$ iterations for each $x^{(i)}$};
+
+    % Step 2 brace below (zK -> metric)
+    \node[fit={(zk) (metric)}] (S2fit) {};
+    \draw[decorate, decoration={brace, mirror, amplitude=3.5pt}]
+        ($(S2fit.south west)+(0,-1.5mm)$) -- ($(S2fit.south east)+(0,-1.5mm)$)
+        node[midway, yshift=-4mm] {\scriptsize Step 2: evaluate $\phi_i$};
+\end{tikzpicture}%
+}
+\caption{Common two-step procedure: draw $x^{(i)}$, run $K{+}1$ iterations from a cold start to obtain $z^{(i)}_{K}$, then compute the performance score $\phi_i$.}
+\label{fig:cp-methodology-flow}
+\end{figure}
+
+We first investigate an image deblurring example using a regression framework as described in~\ref{subsec:regression}.

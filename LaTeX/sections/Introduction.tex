@@ -15,7 +15,7 @@ The formulation in~\eqref{eq:parametric_optimisation} can be deployed in a vast 
 We refer to any mechanism to compute $z^\star(x)$ from an initial condition $z^0 \in Z$ as an \emph{algorithm}. A popular family of algorithms used to solve several classes of optimisation problems is that of \textit{first-order methods}: iterative schemes relying only on first-order derivative information (e.g., gradients or subgradients) of the functions involved. 
 These are typically denoted as:
 \begin{equation}\label{eq:first_order_method}
-  z^{k+1}(x) = T(z^k(x), x),\quad k=0,1,\dots,K-1
+  z^{k+1}(x) = T(z^k(x), x),\quad k=0,1,\dots,K
 \end{equation}
 where $T: \mathbb{R}^n \times \mathbb{R}^d \rightarrow \mathbb{R}^n$ gives the gradient-dependent mapping\footnote{
 As an example, consider the \textit{projected gradient descent} algorithm, given by $T(z^k(x), x) \defeq \Pi_{C(x)}(z^k-\theta\nabla_zf(z^k,x))$, where $\nabla_zf(z^k,x)$ is the gradient in the direction of $z$, and $\theta$ is a hyperparameter representing the step size} 
