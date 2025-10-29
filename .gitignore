@@ -208,3 +208,7 @@ __marimo__/
 
 # VS Code
 .vscode/
+
+
+# Data
+data/
