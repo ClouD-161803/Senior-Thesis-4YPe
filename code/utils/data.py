@@ -46,7 +46,7 @@ class MNISTSource(ImageSource):
     
     def load(self, n_samples: int) -> jnp.ndarray:
         """Load MNIST images from torchvision."""
-        print("Loading MNIST data...")
+        print("\nLoading MNIST data...")
         dataset = torchvision.datasets.MNIST(
             root='./data',
             train=True,
