@@ -8,8 +8,8 @@ Modular framework for image reconstruction with conformal prediction-based uncer
 
 ```bash
 cd code
-python experiments/nmse.py --n-samples 100
-python experiments/regressor.py --n-samples 100
+python experiments/nmse.py --n-samples 100 --solver ista --metric nmse
+python experiments/regressor.py --n-samples 100 --solver fista --metric psnr
 ```
 
 ### Structure
@@ -37,17 +37,20 @@ code/
 ### CLI Arguments
 
 ```md
---n-samples 500            # Number of images
---data-source mnist        # mnist or synthetic
---k-iterations 100         # Solver iterations
---rho-param 1e-4           # Sparsity parameter
---delta 0.1                # Significance level
---calibration-ratio 0.5    # Cal/test split
---kernel-size 8            # Blur kernel size
---blur-std-dev 1.6         # Blur std dev
---noise-std-dev 1e-3       # Noise std dev
---output-dir ./results     # Output directory
---seed 42                  # Random seed
+--n-samples 500                # Number of images
+--data-source mnist            # mnist or synthetic
+--k-iterations 100             # Solver iterations
+--rho-param 1e-4               # Sparsity parameter
+--delta 0.1                    # Significance level
+--calibration-ratio 0.5        # Cal/test split
+--kernel-size 8                # Blur kernel size
+--blur-std-dev 1.6             # Blur std dev
+--noise-std-dev 1e-3           # Noise std dev
+--output-dir ./results         # Output directory
+--seed 42                      # Random seed
+--solver {ista,fista}          # Solver
+--metric {nmse,psnr}           # Metric
+--visualise                    # Generate visualisations
 ```
 
 ## Adding New Experiments
@@ -55,12 +58,28 @@ code/
 ```python
 # experiments/my_exp.py
 from utils.experiment import BaseExperiment, ExperimentConfig
-from utils.main import main, parse_arguments
+from utils.conformal import MetricConfig
+from utils.main import run_experiment, parse_arguments
 
 class MyExperiment(BaseExperiment):
     @classmethod
     def get_config(cls, args) -> ExperimentConfig:
-        return ExperimentConfig(..., solver=cls.get_solver_name(), metric=cls.get_metric_name())
+        return ExperimentConfig(
+            n_samples=args.n_samples,
+            calibration_ratio=args.calibration_ratio,
+            delta=args.delta,
+            data_source=args.data_source,
+            k_iterations=args.k_iterations,
+            rho_param=args.rho_param,
+            kernel_size=args.kernel_size,
+            blur_std_dev=args.blur_std_dev,
+            noise_std_dev=args.noise_std_dev,
+            seed=args.seed,
+            output_dir=args.output_dir,
+            visualise=args.visualise,
+            solver=args.solver or cls.get_default_solver_name(),
+            metric=args.metric or cls.get_default_metric_name()
+        )
     
     @classmethod
     def get_solver_name(cls) -> str:
@@ -71,9 +90,9 @@ class MyExperiment(BaseExperiment):
         return 'metric_name'  # currently implemented: nmse, psnr
     
     @classmethod
-    def get_solver_config(cls) -> SolverConfig:
-        """Optional: customize solver parameters"""
-        return ISTAConfig(max_iterations=100, sparsity_param=1e-4, step_size=None, step_size_factor=0.99)
+    def get_metric_config(cls) -> MetricConfig:
+        """Optional: customise metric parameters"""
+        return MetricConfig()
     
     def compute_nonconformity_scores(self, cal_images, cal_degraded, cal_scores):
         # Your nonconformity function
@@ -81,7 +100,7 @@ class MyExperiment(BaseExperiment):
 
 if __name__ == '__main__':
     args = parse_arguments()
-    main(MyExperiment, args)
+    run_experiment(MyExperiment, args)
 ```
 
 Run: `python experiments/my_exp.py`

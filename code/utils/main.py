@@ -101,20 +101,19 @@ def parse_arguments():
         default=42,
         help='Random seed'
     )
-    #  TODO: Add solver and metric to parser
-    # parser.add_argument(
-    #     '--metric',
-    #     type=str,
-    #     choices=['nmse', 'psnr'],
-    #     default='nmse',
-    #     help='Image quality metric'
-    # )
-    # parser.add_argument(
-    #     '--solver',
-    #     type=str,
-    #     choices=['ista', 'fista'],
-    #     default='ista',
-    #     help='Solver algorithm'
-    # )
+    parser.add_argument(
+        '--metric',
+        type=str,
+        choices=['nmse', 'psnr'],
+        default=None,
+        help='Image quality metric (overrides experiment default)'
+    )
+    parser.add_argument(
+        '--solver',
+        type=str,
+        choices=['ista', 'fista'],
+        default=None,
+        help='Solver algorithm (overrides experiment default)'
+    )
     
     return parser.parse_args()
