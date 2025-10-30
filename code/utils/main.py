@@ -2,7 +2,7 @@ import argparse
 from pathlib import Path
 
 
-def main(experiment_class, args):
+def run_experiment(experiment_class, args):
     """Generic experiment orchestrator."""
     print(f"----- Experiment: {experiment_class.__name__} -----")
     print(f"Data source: {args.data_source}")

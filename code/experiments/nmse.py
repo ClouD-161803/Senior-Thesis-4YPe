@@ -8,7 +8,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from utils.experiment import BaseExperiment, ExperimentConfig
 from utils.conformal import MetricConfig
-from utils.main import main, parse_arguments
+from utils.main import run_experiment, parse_arguments
 
 
 class NMSEExperiment(BaseExperiment):
@@ -69,4 +69,4 @@ class NMSEExperiment(BaseExperiment):
 
 if __name__ == '__main__':
     args = parse_arguments()
-    main(NMSEExperiment, args)
+    run_experiment(NMSEExperiment, args)

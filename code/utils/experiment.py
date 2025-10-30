@@ -153,8 +153,7 @@ class BaseExperiment:
         cal_scores: np.ndarray
     ) -> np.ndarray:
         """
-        Compute nonconformity scores for calibration set.
-        Override this in subclass to implement different nonconformity functions.
+        Compute nonconformity scores for calibration set. Shoulde be overridden.
         
         Args:
             cal_images: Clean calibration images.
