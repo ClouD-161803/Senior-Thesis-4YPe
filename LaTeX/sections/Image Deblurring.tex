@@ -1,50 +1,57 @@
 \subsection{Image deblurring}
 \label{subsubsec:image_deblurring}
-We use image deblurring as a compact, reproducible test case. We adopt as initial steps the procedure described in Section~\ref{sec:common_methodology}. Given a blurred and noisy image $x\in\mathbb{R}^n$ (vectorised and scaled to $[0,1]$), the decision variable $z\in\mathbb{R}^n$ represents the recovered image. We adopt the standard convex model
+We use image deblurring as a compact, reproducible test case, with a setup analogous to that of~\cite[Section 8.1.1]{RSBS25}, with initial steps described in Section~\ref{sec:common_methodology}. Given a blurred and noisy image $x\in\mathbb{R}^n$ (vectorised and scaled to $[0,1]$), the decision variable $z\in\mathbb{R}^n$ represents the recovered image. We formulate the image deblurring problem as the QP
 \begin{equation}
 \label{eq:deblur_model}
 \begin{aligned}
-\underset{z\in\mathbb{R}^n}{\text{minimise}}\quad 
-& \tfrac{1}{2}\,\|Az-x\|_2^2 \;+\; \rho\,\|z\|_1 \\
+\underset{z\in\mathbb{R}^n}{\text{minimise}}\quad & \tfrac{1}{2}\,\|Az-x\|_2^2 \;+\; \rho\,\|z\|_1 \\
 \text{subject to}\quad & 0 \le z \le 1 ,
 \end{aligned}
 \end{equation}
-where $A\in\mathbb{R}^{n\times n}$ is a (known) Gaussian–blur operator realised by a two–dimensional convolution, and $\rho>0$ balances data fidelity and sparsity. The box constraint enforces valid pixel intensities.
+where $A\in\mathbb{R}^{n\times n}$ is a (known) Gaussian–blur operator realised by a two–dimensional convolution, and $\rho>0$ acts as a regulariser parameter balancing data fidelity and sparsity. The box constraint enforces valid pixel intensities.
 
-\emph{First–order method.} We solve \eqref{eq:deblur_model} with a projected proximal–gradient iteration (ISTA with box projection). Writing $f(z)\defeq\tfrac{1}{2}\|Az-x\|_2^2$ and $g(z)\defeq \rho\|z\|_1+\iota_{[0,1]^n}(z)$, the update is
+\paragraph{First-Orde Methods}
+We solve the optimisation problem \eqref{eq:deblur_model} using two standard first-order methods. The problem is of the form $\min_z f(z) + g(z)$, where $f(z) \defeq \tfrac{1}{2}\|Az-x\|_2^2$ is the smooth, differentiable data fidelity term with gradient $\nabla f(z) = A^\top(Az-x)$, and $g(z) \defeq \rho\|z\|_1 + \mathbb{I}_{[0,1]^n}(z)$ is the non-smooth regulariser combining L1-norm sparsity with the box constraint indicator function $\mathbb{1}_{[0,1]^n}$.
+Both methods rely on the proximal operator of $g$, which is computed by composing the soft-thresholding operator $S_{\tau}$ with the box projection $\Pi_{[0,1]^n}$:
 \[
-z_{k+1}
-= \Pi_{[0,1]^n}\!\Big(S_{\alpha\rho}\big(z_k-\alpha\nabla f(z_k)\big)\Big),
-\qquad 
-\nabla f(z)=A^\top(Az-x),
+\mathrm{prox}_{\alpha g}(u) = \Pi_{[0,1]^n}\!\Big(S_{\alpha\rho}(u)\Big),
 \]
-with soft–thresholding $S_{\tau}(u)_i=\mathrm{sign}(u_i)\max\{|u_i|-\tau,0\}$ and projection $\Pi_{[0,1]^n}$ implemented by elementwise clipping. We use a cold start $z_0=0$ and a fixed stepsize $\alpha\in(0,1/L)$, where $L=\|A\|_2^2$; for a convolutional $A$, an accurate $L$ is obtained from the maximum squared magnitude of the kernel’s discrete Fourier transform.
+where $S_{\tau}(u)_i=\mathrm{sign}(u_i)\max\{|u_i|-\tau,0\}$ is applied elementwise and $\Pi_{[0,1]^n}$ is an elementwise clipping to the $[0,1]$ interval.
 
-\emph{Performance metric.} For calibration we report a single scalar per run as required by the framework: the normalised mean–squared error (NMSE) in decibels between the iterate $z_K$ and the clean image $y^\star$ that generated $x$,
+We use a cold start $z_0=0$ and a fixed stepsize $\alpha\in(0,1/L)$, where $L=\|A\|_2^2$ is the Lipschitz constant of $\nabla f$. For the convolutional operator $A$, $L$ is accurately obtained from the maximum squared magnitude of the kernel’s discrete Fourier transform. We implement and test the following two algorithms:
+
+\emph{Iterative Soft-Thresholding Algorithm (ISTA)}, with iteration:
 \[
-\phi(z_K,x)\;=\;10\log_{10}\!\left(\frac{\|z_K-y^\star\|_2^2}{\|y^\star\|_2^2}\right)\;\; \text{(lower is better)}.
+z_{k+1} = \mathrm{prox}_{\alpha g}\big(z_k - \alpha \nabla f(z_k)\big).
 \]
-PSNR can be used interchangeably; we use NMSE(dB) to remain consistent with related work.
+    
+\emph{Fast Iterative Soft-Thresholding Algorithm (FISTA)}, which incorporates Nesterov momentum. Initialising $y_0 = z_0$ and $t_0 = 1$, the iteration proceeds with:
+\begin{align*}
+z_{k+1} &= \mathrm{prox}_{\alpha g}\big(y_k - \alpha \nabla f(y_k)\big) \\
+t_{k+1} &= \frac{1 + \sqrt{1 + 4 t_k^2}}{2} \\
+y_{k+1} &= z_{k+1} + \frac{t_k - 1}{t_{k+1}} (z_{k+1} - z_k)
+\end{align*}
 
-\emph{Numerical set–up.} Our sample space $\mathcal{X}$ is generated from EMNIST letters ($28\times 28$ greyscale). For each clean image $y^\star\!\in[0,1]^n$ we form
+\paragraph{Nonconformity Scores}
+For the conformal-prediction framework, we require a scalar nonconformity score $R_i$ for each sample. We evaluate two distinct approaches to define this score.
+
+First is the \emph{Direct Performance Metric (NMSE)}. The most direct score is the final algorithm's performance itself. We use the normalised mean-squared error (NMSE) in decibels between the final iterate $z_K$ (after $K$ iterations) and the ground-truth clean image $y^\star$:
 \[
-x \;=\; A y^\star + \eta,\qquad 
-A \equiv \text{conv2D}(\,\cdot\,, g_{\sigma_b}),\quad 
+R_i = \phi(z_K(x_i), x_i) \;\defeq\; 10\log_{10}\!\left(\frac{\|z_K(x_i)-y^\star_i\|_2^2}{\|y^\star_i\|_2^2}\right).
+\]
+This score, where lower is better, is used directly for $R_j$ (calibration) and $R_{m+1}$ (test).
+
+Alternatively, we use \emph{Regression Residuals}, following the method detailed in Section~\ref{subsec:regression}. This approach treats the NMSE(dB) as a target variable to be predicted. We define the sample pair as $X_i = (U_i, V_i)$, where the input is the blurred image $U_i = x_i$ and the output is its resulting performance $V_i = \phi(z_K(x_i), x_i)$. A regressor $\hat{\mu}$ is trained on the training set $\mathcal{I}_T$ to learn the mapping $\hat{\mu}(x) \approx \phi(z_K(x), x)$. The nonconformity score for a calibration point $j \in \mathcal{I}_C$ is then the absolute residual:
+\[
+R_j = |V_j - \hat{\mu}(U_j)| = |\phi(z_K(x_j), x_j) - \hat{\mu}(x_j)|.
+\]
+This score measures the unpredictability of the algorithm's performance rather than the performance itself.
+
+\paragraph{Numerical Set-up}
+Our sample space $\mathcal{X}$ is generated from EMNIST letters ($28\times 28$ greyscale). For each clean image $y^\star\!\in[0,1]^n$ we form
+\[
+x \;=\; A y^\star + \eta,\qquad
+A \equiv \text{conv2D}(\,\cdot\,, g_{\sigma_b}),\quad
 \eta\sim\mathcal{N}(0,\sigma_n^2 I),
 \]
 where $g_{\sigma_b}$ is a Gaussian kernel with support size $8$ and standard deviation chosen so that $95\%$ of its mass lies within the support (we use $\sigma_b=1.6$ for $28\times 28$), $\sigma_n=10^{-3}$, and $\rho=10^{-4}$. The operator $A$ and its adjoint $A^\top$ are evaluated by FFT–based circular convolution for speed and deterministic adjointness.
-
-\emph{Implementation notes (Python).} This example is intended to be run directly within the two–step driver.
-\begin{itemize}[leftmargin=*, itemsep=1pt]
-\item \texttt{operators.py}: \texttt{class BlurOperator}\\
-\hspace*{1.2em}\texttt{__init__(kernel):} precompute FFT of $g_{\sigma_b}$ and its flip;\\
-\hspace*{1.2em}\texttt{matvec(z)} $\to Az$ and \texttt{rmatvec(u)} $\to A^\top u$ via FFTs.
-\item \texttt{methods.py}: \texttt{projected\_ista(A, x, rho, K, alpha)}\\
-\hspace*{1.2em}returns $\{z_k\}_{k=0}^K$ with $z_{k+1}=\Pi_{[0,1]^n}\!\big(S_{\alpha\rho}(z_k-\alpha A^\top(Az_k-x))\big)$.
-\item \texttt{metrics.py}: \texttt{nmse\_db(z, y\_true)} and \texttt{psnr(z, y\_true)}.
-\item \texttt{data.py}: EMNIST loader returning pairs $(y^\star,x)$ with controlled $(\sigma_b,\sigma_n)$.
-\item \texttt{experiment\_deblur.py}:\\
-\hspace*{1.2em}\texttt{def run(N, K, rho=1e-4, alpha=None, seed=0):}\\
-\hspace*{2.4em}sample $N$ images, build $A$, construct $x$, run ISTA for $K{+}1$ iterates from $z_0\!=\!0$, and return $\{\phi_i\}_{i=1}^N$ with $\phi_i=\mathrm{NMSE}_{\mathrm{dB}}(z_K^{(i)},y^{\star (i)})$.
-\end{itemize}
-Recommended defaults are $K\in[50,200]$ and $\alpha=0.99/L$ with $L$ estimated once from the kernel FFT. This set–up yields a lightweight, fully deterministic benchmark that cleanly instantiates the two–step pipeline without introducing extraneous notation or solver details.
