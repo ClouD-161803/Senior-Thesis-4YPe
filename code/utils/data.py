@@ -41,12 +41,17 @@ class ImageSource(ABC):
 class MNISTSource(ImageSource):
     """MNIST dataset source."""
     
-    def __init__(self, config: ImageConfig):
+    def __init__(self, config: ImageConfig, seed: int = 42):
         self.config = config
+        self.seed = seed
     
     def load(self, n_samples: int) -> jnp.ndarray:
         """Load MNIST images from torchvision."""
         print("\nLoading MNIST data...")
+        
+        import torch
+        torch.manual_seed(self.seed)
+        
         dataset = torchvision.datasets.MNIST(
             root='./data',
             train=True,
@@ -54,10 +59,14 @@ class MNISTSource(ImageSource):
             transform=ToTensor()
         )
         
+        generator = torch.Generator()
+        generator.manual_seed(self.seed)
+        
         loader = torch.utils.data.DataLoader(
             dataset,
             batch_size=n_samples,
-            shuffle=True
+            shuffle=True,
+            generator=generator
         )
         
         images, _ = next(iter(loader))
@@ -70,8 +79,9 @@ class MNISTSource(ImageSource):
 class SyntheticSource(ImageSource):
     """Synthetic image source (simple patterns)."""
     
-    def __init__(self, config: ImageConfig):
+    def __init__(self, config: ImageConfig, seed: int = 42):
         self.config = config
+        self.seed = seed
     
     def load(self, n_samples: int) -> jnp.ndarray:
         """Generate synthetic images."""
@@ -83,7 +93,7 @@ class SyntheticSource(ImageSource):
             img = img.at[20:23, 5:18].set(1.0)
             return img
         
-        keys = jax.random.split(jax.random.PRNGKey(0), n_samples)
+        keys = jax.random.split(jax.random.PRNGKey(self.seed), n_samples)
         images = jax.vmap(generate_single)(keys)
         
         print(f"Synthetic data generated: {images.shape}")
@@ -163,7 +173,8 @@ class DataPipeline:
         image_config: ImageConfig,
         blur_config: BlurConfig,
         noise_config: NoiseConfig,
-        source: ImageSource
+        source: ImageSource,
+        seed: int = 42
     ):
         """
         Initialise data pipeline.
@@ -173,11 +184,13 @@ class DataPipeline:
             blur_config: Blur kernel configuration.
             noise_config: Noise configuration.
             source: Image source (MNIST, Synthetic).
+            seed: Random seed for reproducibility.
         """
         self.image_config = image_config
         self.blur_config = blur_config
         self.noise_config = noise_config
         self.source = source
+        self.seed = seed
         
         # Initialise blur operator
         kernel = KernelFactory.gaussian(blur_config)

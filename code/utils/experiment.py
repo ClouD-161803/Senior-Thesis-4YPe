@@ -71,13 +71,13 @@ class BaseExperiment:
         )
         
         if self.config.data_source == 'mnist':
-            source = MNISTSource(image_cfg)
+            source = MNISTSource(image_cfg, seed=self.config.seed)
         elif self.config.data_source == 'synthetic':
-            source = SyntheticSource(image_cfg)
+            source = SyntheticSource(image_cfg, seed=self.config.seed)
         else:
             raise ValueError(f"Unknown data source: {self.config.data_source}")
         
-        self.data_pipeline = DataPipeline(image_cfg, blur_cfg, noise_cfg, source)
+        self.data_pipeline = DataPipeline(image_cfg, blur_cfg, noise_cfg, source, seed=self.config.seed)
     
     def _setup_solver(self) -> None:
         """Initialise solver."""

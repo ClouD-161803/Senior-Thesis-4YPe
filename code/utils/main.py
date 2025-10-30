@@ -10,6 +10,7 @@ def main(experiment_class, args):
     print(f"Solver: {experiment_class.get_solver_name()}")
     print(f"Solver iterations: {args.k_iterations}")
     print(f"Significance Level: {args.delta}")
+    print(f"Random seed: {args.seed}")
     
     config = experiment_class.get_config(args)
     
