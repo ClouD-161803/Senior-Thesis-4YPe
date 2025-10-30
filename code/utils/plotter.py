@@ -87,7 +87,7 @@ class ReconstructionPlotter(Plotter):
 class BestWorstPlotter(Plotter):
     """Plots best and worst reconstructions side-by-side."""
     
-    def plot(self, data: Dict[str, Any], filename: str) -> None:
+    def plot(self, data: Dict[str, Any], filename: str, metric_name: str = 'NMSE') -> None:
         """
         Plot best and worst reconstructions.
         
@@ -96,6 +96,7 @@ class BestWorstPlotter(Plotter):
                 - 'y_true_best', 'x_best', 'z_K_best', 'score_best'
                 - 'y_true_worst', 'x_worst', 'z_K_worst', 'score_worst'
             filename: Output filename.
+            metric_name: Name of metric for display.
         """
         y_best = ImageNormaliser.normalise(data['y_true_best'], self.config.vmin, self.config.vmax)
         x_best = ImageNormaliser.normalise(data['x_best'], self.config.vmin, self.config.vmax)
@@ -118,7 +119,7 @@ class BestWorstPlotter(Plotter):
         
         axes[0, 2].imshow(z_best, cmap=self.config.cmap, vmin=self.config.vmin, vmax=self.config.vmax)
         axes[0, 2].set_title(
-            f'Reconstructed (z_K)\n[Best] NMSE: {data["score_best"]:.2f} dB',
+            f'Reconstructed (z_K)\n[Best] {metric_name}: {data["score_best"]:.2f} dB',
             fontsize=16, fontweight='bold', color='green'
         )
         axes[0, 2].axis('off')
@@ -134,7 +135,7 @@ class BestWorstPlotter(Plotter):
         
         axes[1, 2].imshow(z_worst, cmap=self.config.cmap, vmin=self.config.vmin, vmax=self.config.vmax)
         axes[1, 2].set_title(
-            f'Reconstructed (z_K)\n[Worst] NMSE: {data["score_worst"]:.2f} dB',
+            f'Reconstructed (z_K)\n[Worst] {metric_name}: {data["score_worst"]:.2f} dB',
             fontsize=16, fontweight='bold', color='red'
         )
         axes[1, 2].axis('off')
@@ -145,7 +146,7 @@ class BestWorstPlotter(Plotter):
         try:
             plt.savefig(filename, dpi=self.config.dpi)
             print(f"Saved: {filename}")
-            print(f"Best NMSE: {data['score_best']:.4f} dB | Worst NMSE: {data['score_worst']:.4f} dB")
+            print(f"Best {metric_name}: {data['score_best']:.4f} dB | Worst {metric_name}: {data['score_worst']:.4f} dB")
         except Exception as e:
             print(f"Error saving {filename}: {e}")
         finally:

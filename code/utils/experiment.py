@@ -13,7 +13,7 @@ from datetime import datetime
 
 from .data import ImageConfig, BlurConfig, NoiseConfig, DataPipeline, MNISTSource, SyntheticSource
 from .solver import ISTAConfig, SolverFactory
-from .conformal import ConformalConfig, ConformalFactory, ConformalAnalyser, ConformalRegressor
+from .conformal import ConformalConfig, ConformalFactory, ConformalAnalyser, MetricConfig
 from .plotter import PlotConfig, PlotterFactory
 from .conformal import MetricFactory
 
@@ -34,6 +34,7 @@ class ExperimentConfig:
     output_dir: str = './results'
     visualise: bool = True
     solver: str = 'ista'
+    metric: str = 'nmse'
 
 
 class BaseExperiment:
@@ -55,8 +56,24 @@ class BaseExperiment:
     
     @classmethod
     def get_solver_name(cls) -> str:
-        """Return preferred solver for this experiment."""
-        return 'ista'
+        """Return solver for the experiment. Should be overridden."""
+        return 'solver_name'
+    
+    @classmethod
+    def get_metric_name(cls) -> str:
+        """Return metric for the experiment. Should be overridden."""
+        return 'metric_name'
+    
+    @classmethod
+    def get_metric_config(cls) -> MetricConfig:
+        """
+        Return metric configuration for the experiment.
+        Override to customize metric parameters per experiment.
+        
+        Returns:
+            MetricConfig instance.
+        """
+        return MetricConfig()
     
     def _setup_pipeline(self) -> None:
         """Initialise data pipeline."""
@@ -94,7 +111,10 @@ class BaseExperiment:
     
     def _setup_metric(self) -> None:
         """Initialise metric."""
-        self.metric = MetricFactory.create('nmse')
+        metric_name = self.get_metric_name()
+        self.config.metric = metric_name
+        metric_cfg = self.get_metric_config()
+        self.metric = MetricFactory.create(metric_name, metric_cfg)
     
     def run_solver_on_batch(
         self,
@@ -155,6 +175,7 @@ class BaseExperiment:
         print(f"  Calibration ratio: {self.config.calibration_ratio}")
         print(f"  Delta (significance level): {self.config.delta}")
         print(f"  Solver: {self.config.solver}")
+        print(f"  Metric: {self.config.metric}")
         print(f"  Solver iterations: {self.config.k_iterations}")
         print(f"  Sparsity parameter: {self.config.rho_param}")
         print(f"  Kernel size: {self.config.kernel_size}")
@@ -306,7 +327,7 @@ class BaseExperiment:
         }
         
         output_file = self.output_dir / f'{self.__class__.__name__}_best_worst.png'
-        best_worst_plotter.plot(data, str(output_file))
+        best_worst_plotter.plot(data, str(output_file), metric_name=self.config.metric.upper()) # type: ignore  # TODO fix
     
     def _save_results(self, results: Dict[str, Any]) -> None:
         """Save experiment results to JSON."""

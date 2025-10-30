@@ -8,6 +8,7 @@ def main(experiment_class, args):
     print(f"Data source: {args.data_source}")
     print(f"Number of samples: {args.n_samples}")
     print(f"Solver: {experiment_class.get_solver_name()}")
+    print(f"Metric: {experiment_class.get_metric_name()}")
     print(f"Solver iterations: {args.k_iterations}")
     print(f"Significance Level: {args.delta}")
     print(f"Random seed: {args.seed}")
@@ -100,5 +101,20 @@ def parse_arguments():
         default=42,
         help='Random seed'
     )
+    #  TODO: Add solver and metric to parser
+    # parser.add_argument(
+    #     '--metric',
+    #     type=str,
+    #     choices=['nmse', 'psnr'],
+    #     default='nmse',
+    #     help='Image quality metric'
+    # )
+    # parser.add_argument(
+    #     '--solver',
+    #     type=str,
+    #     choices=['ista', 'fista'],
+    #     default='ista',
+    #     help='Solver algorithm'
+    # )
     
     return parser.parse_args()

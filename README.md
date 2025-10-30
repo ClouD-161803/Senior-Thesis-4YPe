@@ -60,11 +60,20 @@ from utils.main import main, parse_arguments
 class MyExperiment(BaseExperiment):
     @classmethod
     def get_config(cls, args) -> ExperimentConfig:
-        return ExperimentConfig(..., solver=cls.get_solver_name())
+        return ExperimentConfig(..., solver=cls.get_solver_name(), metric=cls.get_metric_name())
     
     @classmethod
     def get_solver_name(cls) -> str:
-        return 'method' # currently implemented: ista, fista
+        return 'solver_name'  # currently implemented: ista, fista
+
+    @classmethod
+    def get_metric_name(cls) -> str:
+        return 'metric_name'  # currently implemented: nmse, psnr
+    
+    @classmethod
+    def get_solver_config(cls) -> SolverConfig:
+        """Optional: customize solver parameters"""
+        return ISTAConfig(max_iterations=100, sparsity_param=1e-4, step_size=None, step_size_factor=0.99)
     
     def compute_nonconformity_scores(self, cal_images, cal_degraded, cal_scores):
         # Your nonconformity function

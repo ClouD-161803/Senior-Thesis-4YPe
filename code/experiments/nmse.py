@@ -7,16 +7,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from utils.experiment import BaseExperiment, ExperimentConfig
+from utils.conformal import MetricConfig
 from utils.main import main, parse_arguments
 
 
 class NMSEExperiment(BaseExperiment):
-    """
-    Conformal prediction experiment using NMSE residuals as nonconformity scores.
-    
-    Nonconformity function: |NMSE_score - baseline_NMSE|
-    where baseline_NMSE is the median NMSE on calibration set.
-    """
     
     @classmethod
     def get_config(cls, args) -> ExperimentConfig:
@@ -34,12 +29,21 @@ class NMSEExperiment(BaseExperiment):
             seed=args.seed,
             output_dir=args.output_dir,
             visualise=args.visualise,
-            solver=cls.get_solver_name()
+            solver=cls.get_solver_name(),
+            metric=cls.get_metric_name()
         )
     
     @classmethod
     def get_solver_name(cls) -> str:
         return 'ista'
+    
+    @classmethod
+    def get_metric_name(cls) -> str:
+        return 'nmse'
+    
+    @classmethod
+    def get_metric_config(cls) -> MetricConfig:
+        return MetricConfig()
     
     def compute_nonconformity_scores(
         self,

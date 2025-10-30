@@ -14,16 +14,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from utils.experiment import BaseExperiment, ExperimentConfig
+from utils.conformal import MetricConfig
 from utils.main import main, parse_arguments
 
 
 class RegressionExperiment(BaseExperiment):
-    """
-    Conformal prediction experiment using regression residuals as nonconformity scores.
-    
-    Nonconformity function: |NMSE_score - predicted_NMSE|
-    where predicted_NMSE comes from a regression model trained on calibration features.
-    """
     
     @classmethod
     def get_config(cls, args) -> ExperimentConfig:
@@ -41,12 +36,21 @@ class RegressionExperiment(BaseExperiment):
             seed=args.seed,
             output_dir=args.output_dir,
             visualise=args.visualise,
-            solver=cls.get_solver_name()
+            solver=cls.get_solver_name(),
+            metric=cls.get_metric_name()
         )
     
     @classmethod
     def get_solver_name(cls) -> str:
         return 'fista'
+    
+    @classmethod
+    def get_metric_name(cls) -> str:
+        return 'psnr'
+    
+    @classmethod
+    def get_metric_config(cls) -> MetricConfig:
+        return MetricConfig(max_pixel_value=1.0)
     
     def extract_features(self, images: jnp.ndarray) -> np.ndarray:
         """
