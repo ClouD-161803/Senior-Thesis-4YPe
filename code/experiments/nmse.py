@@ -39,7 +39,6 @@ class NMSEExperiment(BaseExperiment):
     
     @classmethod
     def get_solver_name(cls) -> str:
-        """Use ISTA for NMSE experiment."""
         return 'ista'
     
     def compute_nonconformity_scores(
