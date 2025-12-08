@@ -36,17 +36,17 @@ class RegressionExperiment(BaseExperiment):
             seed=args.seed,
             output_dir=args.output_dir,
             visualise=args.visualise,
-            solver=cls.get_solver_name(),
-            metric=cls.get_metric_name()
+            solver=args.solver or cls.get_default_solver_name(),
+            metric=args.metric or cls.get_default_metric_name()
         )
     
     @classmethod
-    def get_solver_name(cls) -> str:
-        return 'fista'
+    def get_default_solver_name(cls) -> str:
+        return 'ista'
     
     @classmethod
-    def get_metric_name(cls) -> str:
-        return 'psnr'
+    def get_default_metric_name(cls) -> str:
+        return 'nmse'
     
     @classmethod
     def get_metric_config(cls) -> MetricConfig:

@@ -55,14 +55,14 @@ class BaseExperiment:
         raise NotImplementedError
     
     @classmethod
-    def get_solver_name(cls) -> str:
-        """Return solver for the experiment. Should be overridden."""
-        return 'solver_name'
+    def get_default_solver_name(cls) -> str:
+        """Return default solver for the experiment."""
+        return 'ista'
     
     @classmethod
-    def get_metric_name(cls) -> str:
-        """Return metric for the experiment. Should be overridden."""
-        return 'metric_name'
+    def get_default_metric_name(cls) -> str:
+        """Return default metric for the experiment."""
+        return 'nmse'
     
     @classmethod
     def get_metric_config(cls) -> MetricConfig:
@@ -98,8 +98,7 @@ class BaseExperiment:
     
     def _setup_solver(self) -> None:
         """Initialise solver."""
-        solver_name = self.get_solver_name()
-        self.config.solver = solver_name
+        solver_name = self.config.solver
         
         solver_cfg = ISTAConfig(
             max_iterations=self.config.k_iterations,
@@ -111,8 +110,7 @@ class BaseExperiment:
     
     def _setup_metric(self) -> None:
         """Initialise metric."""
-        metric_name = self.get_metric_name()
-        self.config.metric = metric_name
+        metric_name = self.config.metric
         metric_cfg = self.get_metric_config()
         self.metric = MetricFactory.create(metric_name, metric_cfg)
     
