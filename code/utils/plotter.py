@@ -61,18 +61,18 @@ class ReconstructionPlotter(Plotter):
         fig, axes = plt.subplots(1, 3, figsize=self.config.figsize)
         
         axes[0].imshow(y_true_norm, cmap=self.config.cmap, vmin=self.config.vmin, vmax=self.config.vmax)
-        axes[0].set_title('Ground Truth (y*)', fontsize=14)
+        axes[0].set_title('Ground Truth (z*)', fontsize=24)
         axes[0].axis('off')
         
         axes[1].imshow(x_norm, cmap=self.config.cmap, vmin=self.config.vmin, vmax=self.config.vmax)
-        axes[1].set_title('Blurred & Noisy (x)', fontsize=14)
+        axes[1].set_title('Blurred & Noisy (x)', fontsize=24)
         axes[1].axis('off')
         
         axes[2].imshow(z_K_norm, cmap=self.config.cmap, vmin=self.config.vmin, vmax=self.config.vmax)
-        axes[2].set_title('Reconstructed (z_K)', fontsize=14)
+        axes[2].set_title('Reconstructed (z_K)', fontsize=24)
         axes[2].axis('off')
         
-        fig.suptitle('Image Reconstruction', fontsize=18, fontweight='bold')
+        fig.suptitle('Image Reconstruction', fontsize=28, fontweight='bold')
         plt.tight_layout(rect=(0, 0.03, 1, 0.95))
         
         try:
@@ -110,37 +110,37 @@ class BestWorstPlotter(Plotter):
         
         # Best row
         axes[0, 0].imshow(y_best, cmap=self.config.cmap, vmin=self.config.vmin, vmax=self.config.vmax)
-        axes[0, 0].set_title('Ground Truth (y*)\n[Best]', fontsize=16, fontweight='bold')
+        axes[0, 0].set_title('Ground Truth (z*)\n[Best]', fontsize=26, fontweight='bold')
         axes[0, 0].axis('off')
         
         axes[0, 1].imshow(x_best, cmap=self.config.cmap, vmin=self.config.vmin, vmax=self.config.vmax)
-        axes[0, 1].set_title('Blurred & Noisy (x)\n[Best]', fontsize=16, fontweight='bold')
+        axes[0, 1].set_title('Blurred & Noisy (x)\n[Best]', fontsize=26, fontweight='bold')
         axes[0, 1].axis('off')
         
         axes[0, 2].imshow(z_best, cmap=self.config.cmap, vmin=self.config.vmin, vmax=self.config.vmax)
         axes[0, 2].set_title(
             f'Reconstructed (z_K)\n[Best] {metric_name}: {data["score_best"]:.2f} dB',
-            fontsize=16, fontweight='bold', color='green'
+            fontsize=26, fontweight='bold', color='green'
         )
         axes[0, 2].axis('off')
         
         # Worst row
         axes[1, 0].imshow(y_worst, cmap=self.config.cmap, vmin=self.config.vmin, vmax=self.config.vmax)
-        axes[1, 0].set_title('Ground Truth (y*)\n[Worst]', fontsize=16, fontweight='bold')
+        axes[1, 0].set_title('Ground Truth (z*)\n[Worst]', fontsize=26, fontweight='bold')
         axes[1, 0].axis('off')
         
         axes[1, 1].imshow(x_worst, cmap=self.config.cmap, vmin=self.config.vmin, vmax=self.config.vmax)
-        axes[1, 1].set_title('Blurred & Noisy (x)\n[Worst]', fontsize=16, fontweight='bold')
+        axes[1, 1].set_title('Blurred & Noisy (x)\n[Worst]', fontsize=26, fontweight='bold')
         axes[1, 1].axis('off')
         
         axes[1, 2].imshow(z_worst, cmap=self.config.cmap, vmin=self.config.vmin, vmax=self.config.vmax)
         axes[1, 2].set_title(
             f'Reconstructed (z_K)\n[Worst] {metric_name}: {data["score_worst"]:.2f} dB',
-            fontsize=16, fontweight='bold', color='red'
+            fontsize=26, fontweight='bold', color='red'
         )
         axes[1, 2].axis('off')
         
-        fig.suptitle('Image Reconstruction: Best vs Worst', fontsize=20, fontweight='bold')
+        fig.suptitle('Image Reconstruction: Best vs Worst', fontsize=30, fontweight='bold')
         plt.tight_layout(rect=(0, 0.02, 1, 0.97))
         
         try:

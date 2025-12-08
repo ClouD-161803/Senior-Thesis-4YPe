@@ -42,11 +42,11 @@ class RegressionExperiment(BaseExperiment):
     
     @classmethod
     def get_default_solver_name(cls) -> str:
-        return 'fista'
+        return 'ista'
     
     @classmethod
     def get_default_metric_name(cls) -> str:
-        return 'psnr'
+        return 'nmse'
     
     @classmethod
     def get_metric_config(cls) -> MetricConfig:
