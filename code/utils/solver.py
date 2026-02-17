@@ -49,10 +49,10 @@ class BoxConstraint(ProximalOperator):
 
 class Solver(ABC):
     """Abstract base class for optimisation solvers."""
-    
+
     def __init__(self, config: SolverConfig):
         self.config = config
-    
+
     @abstractmethod
     def solve(
         self,
@@ -64,15 +64,39 @@ class Solver(ABC):
         pass
 
 
-class ISTA(Solver):
-    """Iterative Soft-Thresholding Algorithm."""
-    
+class ISTABaseSolver(Solver):
+    """Base class for ISTA-type algorithms with proximal operators."""
+
     def __init__(self, config: ISTAConfig):
         super().__init__(config)
         self.config = config
         self.soft_threshold = SoftThreshold(config.sparsity_param)
         self.box_proj = BoxConstraint()
-    
+
+    def _compute_step_size(self, lipschitz_constant: Optional[float]) -> float:
+        """Compute step size from Lipschitz constant or use configured value."""
+        if self.config.step_size is not None:
+            return self.config.step_size
+
+        if lipschitz_constant is None:
+            raise ValueError("Either step_size or lipschitz_constant must be provided")
+
+        return self.config.step_size_factor / lipschitz_constant
+
+    def _apply_proximal_step(
+        self,
+        z: jnp.ndarray,
+        grad: jnp.ndarray,
+        step_size: float
+    ) -> jnp.ndarray:
+        """Apply soft-thresholding and box projection."""
+        z_thresh = self.soft_threshold(z - step_size * grad, step_size)
+        return self.box_proj(z_thresh, step_size)
+
+
+class ISTA(ISTABaseSolver):
+    """Iterative Soft-Thresholding Algorithm."""
+
     def solve(
         self,
         forward_op: Callable,
@@ -82,24 +106,23 @@ class ISTA(Solver):
     ) -> jnp.ndarray:
         """
         Solve using ISTA.
-        
+
         Args:
             forward_op: Forward operator A (blur).
             adjoint_op: Adjoint operator A^T.
             measurement: Measurement b (blurred + noisy image).
             lipschitz_constant: Lipschitz constant for step size selection.
-        
+
         Returns:
             Final solution.
         """
         step_size = self._compute_step_size(lipschitz_constant)
-        
+
         def ist_step(z, _):
             grad = adjoint_op(forward_op(z) - measurement)
-            z_thresh = self.soft_threshold(z - step_size * grad, step_size)
-            z_proj = self.box_proj(z_thresh, step_size)
+            z_proj = self._apply_proximal_step(z, grad, step_size)
             return z_proj, z_proj
-        
+
         z0 = jnp.zeros_like(measurement)
         _, iterates = jax.lax.scan(
             ist_step,
@@ -107,9 +130,9 @@ class ISTA(Solver):
             None,
             length=self.config.max_iterations
         )
-        
+
         return iterates[-1]
-    
+
     def solve_with_history(
         self,
         forward_op: Callable,
@@ -119,13 +142,12 @@ class ISTA(Solver):
     ) -> jnp.ndarray:
         """Solve and return full iterate history."""
         step_size = self._compute_step_size(lipschitz_constant)
-        
+
         def ist_step(z, _):
             grad = adjoint_op(forward_op(z) - measurement)
-            z_thresh = self.soft_threshold(z - step_size * grad, step_size)
-            z_proj = self.box_proj(z_thresh, step_size)
+            z_proj = self._apply_proximal_step(z, grad, step_size)
             return z_proj, z_proj
-        
+
         z0 = jnp.zeros_like(measurement)
         _, iterates = jax.lax.scan(
             ist_step,
@@ -133,28 +155,13 @@ class ISTA(Solver):
             None,
             length=self.config.max_iterations
         )
-        
+
         return iterates
-    
-    def _compute_step_size(self, lipschitz_constant: Optional[float]) -> float:
-        if self.config.step_size is not None:
-            return self.config.step_size
-        
-        if lipschitz_constant is None:
-            raise ValueError("Either step_size or lipschitz_constant must be provided")
-        
-        return self.config.step_size_factor / lipschitz_constant
 
 
-class FISTA(Solver):
+class FISTA(ISTABaseSolver):
     """Fast Iterative Soft-Thresholding Algorithm."""
-    
-    def __init__(self, config: ISTAConfig):
-        super().__init__(config)
-        self.config = config
-        self.soft_threshold = SoftThreshold(config.sparsity_param)
-        self.box_proj = BoxConstraint()
-    
+
     def solve(
         self,
         forward_op: Callable,
@@ -164,27 +171,26 @@ class FISTA(Solver):
     ) -> jnp.ndarray:
         """
         Solve using FISTA (accelerated ISTA).
-        
+
         Args:
             forward_op: Forward operator A (blur).
             adjoint_op: Adjoint operator A^T.
             measurement: Measurement b (blurred + noisy image).
             lipschitz_constant: Lipschitz constant for step size selection.
-        
+
         Returns:
             Final solution.
         """
         step_size = self._compute_step_size(lipschitz_constant)
-        
+
         def fista_step(carry, _):
             z, z_prev, t = carry
             grad = adjoint_op(forward_op(z) - measurement)
-            z_new_thresh = self.soft_threshold(z - step_size * grad, step_size)
-            z_new = self.box_proj(z_new_thresh, step_size)
+            z_new = self._apply_proximal_step(z, grad, step_size)
             t_new = (1 + jnp.sqrt(1 + 4 * t**2)) / 2
             z_accel = z_new + ((t - 1) / t_new) * (z_new - z_prev)
             return (z_accel, z_new, t_new), z_new
-        
+
         z0 = jnp.zeros_like(measurement)
         carry = (z0, z0, 1.0)
         (z_final, _, _), _ = jax.lax.scan(
@@ -193,17 +199,8 @@ class FISTA(Solver):
             None,
             length=self.config.max_iterations
         )
-        
+
         return z_final
-    
-    def _compute_step_size(self, lipschitz_constant: Optional[float]) -> float:
-        if self.config.step_size is not None:
-            return self.config.step_size
-        
-        if lipschitz_constant is None:
-            raise ValueError("Either step_size or lipschitz_constant must be provided")
-        
-        return self.config.step_size_factor / lipschitz_constant
 
 
 class SolverFactory:

@@ -4,16 +4,16 @@ from pathlib import Path
 
 def run_experiment(experiment_class, args):
     """Generic experiment orchestrator."""
-    print(f"----- Experiment: {experiment_class.__name__} -----")
-    print(f"Data source: {args.data_source}")
-    print(f"Number of samples: {args.n_samples}")
-    print(f"Solver: {experiment_class.get_default_solver_name()}")
-    print(f"Metric: {experiment_class.get_default_metric_name()}")
-    print(f"Solver iterations: {args.k_iterations}")
-    print(f"Significance Level: {args.delta}")
-    print(f"Random seed: {args.seed}")
-    
     config = experiment_class.get_config(args)
+
+    print(f"----- Experiment: {experiment_class.__name__} -----")
+    print(f"Data source: {config.data_source}")
+    print(f"Number of samples: {config.n_samples}")
+    print(f"Solver: {config.solver}")
+    print(f"Metric: {config.metric}")
+    print(f"Solver iterations: {config.k_iterations}")
+    print(f"Significance Level: {config.delta}")
+    print(f"Random seed: {config.seed}")
     
     experiment = experiment_class(config)
     results = experiment.run()

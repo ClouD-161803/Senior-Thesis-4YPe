@@ -153,12 +153,81 @@ class BestWorstPlotter(Plotter):
             plt.close(fig)
 
 
+class WorstVs90thQuantilePlotter(Plotter):
+    """Plots worst reconstruction vs 90th quantile best reconstruction."""
+    
+    def plot(self, data: Dict[str, Any], filename: str, metric_name: str = 'NMSE') -> None:
+        """
+        Plot worst vs 90th quantile best reconstructions.
+        
+        Args:
+            data: Dictionary with keys:
+                - 'y_true_worst', 'x_worst', 'z_K_worst', 'score_worst'
+                - 'y_true_90th', 'x_90th', 'z_K_90th', 'score_90th'
+            filename: Output filename.
+            metric_name: Name of metric for display.
+        """
+        y_worst = ImageNormaliser.normalise(data['y_true_worst'], self.config.vmin, self.config.vmax)
+        x_worst = ImageNormaliser.normalise(data['x_worst'], self.config.vmin, self.config.vmax)
+        z_worst = ImageNormaliser.normalise(data['z_K_worst'], self.config.vmin, self.config.vmax)
+        
+        y_90th = ImageNormaliser.normalise(data['y_true_90th'], self.config.vmin, self.config.vmax)
+        x_90th = ImageNormaliser.normalise(data['x_90th'], self.config.vmin, self.config.vmax)
+        z_90th = ImageNormaliser.normalise(data['z_K_90th'], self.config.vmin, self.config.vmax)
+        
+        fig, axes = plt.subplots(2, 3, figsize=(18, 12))
+        
+        # Worst row
+        axes[0, 0].imshow(y_worst, cmap=self.config.cmap, vmin=self.config.vmin, vmax=self.config.vmax)
+        axes[0, 0].set_title('Ground Truth (z*)\n[Worst]', fontsize=26, fontweight='bold')
+        axes[0, 0].axis('off')
+        
+        axes[0, 1].imshow(x_worst, cmap=self.config.cmap, vmin=self.config.vmin, vmax=self.config.vmax)
+        axes[0, 1].set_title('Blurred & Noisy (x)\n[Worst]', fontsize=26, fontweight='bold')
+        axes[0, 1].axis('off')
+        
+        axes[0, 2].imshow(z_worst, cmap=self.config.cmap, vmin=self.config.vmin, vmax=self.config.vmax)
+        axes[0, 2].set_title(
+            f'Reconstructed (z_K)\n[Worst] {metric_name}: {data["score_worst"]:.2f} dB',
+            fontsize=26, fontweight='bold', color='red'
+        )
+        axes[0, 2].axis('off')
+        
+        # 90th quantile row
+        axes[1, 0].imshow(y_90th, cmap=self.config.cmap, vmin=self.config.vmin, vmax=self.config.vmax)
+        axes[1, 0].set_title('Ground Truth (z*)\n[90th Quantile]', fontsize=26, fontweight='bold')
+        axes[1, 0].axis('off')
+        
+        axes[1, 1].imshow(x_90th, cmap=self.config.cmap, vmin=self.config.vmin, vmax=self.config.vmax)
+        axes[1, 1].set_title('Blurred & Noisy (x)\n[90th Quantile]', fontsize=26, fontweight='bold')
+        axes[1, 1].axis('off')
+        
+        axes[1, 2].imshow(z_90th, cmap=self.config.cmap, vmin=self.config.vmin, vmax=self.config.vmax)
+        axes[1, 2].set_title(
+            f'Reconstructed (z_K)\n[90th Quantile] {metric_name}: {data["score_90th"]:.2f} dB',
+            fontsize=26, fontweight='bold', color='orange'
+        )
+        axes[1, 2].axis('off')
+        
+        plt.tight_layout()
+        
+        try:
+            plt.savefig(filename, dpi=self.config.dpi)
+            print(f"Saved: {filename}")
+            print(f"Worst {metric_name}: {data['score_worst']:.4f} dB | 90th Quantile {metric_name}: {data['score_90th']:.4f} dB")
+        except Exception as e:
+            print(f"Error saving {filename}: {e}")
+        finally:
+            plt.close(fig)
+
+
 class PlotterFactory:
     """Factory for creating plotters."""
     
     _plotters = {
         'reconstruction': ReconstructionPlotter,
         'best_worst': BestWorstPlotter,
+        'worst_vs_90th': WorstVs90thQuantilePlotter,
     }
     
     @classmethod

@@ -325,6 +325,25 @@ class BaseExperiment:
         
         output_file = self.output_dir / f'{self.__class__.__name__}_best_worst.png'
         best_worst_plotter.plot(data, str(output_file), metric_name=self.config.metric.upper()) # type: ignore  # TODO fix
+
+        quantile_90_idx_test = np.argmin(np.abs(test_scores - np.percentile(test_scores, 90)))
+        quantile_90_global_idx = test_indices[quantile_90_idx_test]
+        
+        worst_vs_90th_plotter = PlotterFactory.create('worst_vs_90th', plot_cfg)
+        
+        data_90th = {
+            'y_true_worst': clean_images[worst_global_idx],
+            'x_worst': degraded_images[worst_global_idx],
+            'z_K_worst': reconstructed_images[worst_global_idx],
+            'score_worst': scores[worst_global_idx],
+            'y_true_90th': clean_images[quantile_90_global_idx],
+            'x_90th': degraded_images[quantile_90_global_idx],
+            'z_K_90th': reconstructed_images[quantile_90_global_idx],
+            'score_90th': scores[quantile_90_global_idx],
+        }
+        
+        output_file_90th = self.output_dir / f'{self.__class__.__name__}_worst_vs_90th.png'
+        worst_vs_90th_plotter.plot(data_90th, str(output_file_90th), metric_name=self.config.metric.upper()) # type: ignore  # TODO fix
     
     def _save_results(self, results: Dict[str, Any]) -> None:
         """Save experiment results to JSON."""
