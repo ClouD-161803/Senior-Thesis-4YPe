@@ -134,7 +134,7 @@ class BaseExperiment:
                 forward_op=blur_op.apply,
                 adjoint_op=blur_op.apply_adjoint,
                 measurement=degraded,
-                lipschitz_constant=lipschitz_constant # type: ignore   # TODO  fix
+                lipschitz_constant=lipschitz_constant
             )
             score = self.metric.compute(reconstructed, clean)
             return score, reconstructed

@@ -58,9 +58,21 @@ class Solver(ABC):
         self,
         forward_op: Callable,
         adjoint_op: Callable,
-        measurement: jnp.ndarray
+        measurement: jnp.ndarray,
+        lipschitz_constant: Optional[float] = None
     ) -> jnp.ndarray:
         """Solve inverse problem: min_x ||Ax - b||^2 + R(x)."""
+        pass
+
+    @abstractmethod
+    def solve_with_history(
+        self,
+        forward_op: Callable,
+        adjoint_op: Callable,
+        measurement: jnp.ndarray,
+        lipschitz_constant: Optional[float] = None
+    ) -> jnp.ndarray:
+        """Solve and return full iterate history."""
         pass
 
 
@@ -201,6 +213,35 @@ class FISTA(ISTABaseSolver):
         )
 
         return z_final
+
+    def solve_with_history(
+        self,
+        forward_op: Callable,
+        adjoint_op: Callable,
+        measurement: jnp.ndarray,
+        lipschitz_constant: Optional[float] = None
+    ) -> jnp.ndarray:
+        """Solve using FISTA and return full iterate history."""
+        step_size = self._compute_step_size(lipschitz_constant)
+
+        def fista_step(carry, _):
+            z, z_prev, t = carry
+            grad = adjoint_op(forward_op(z) - measurement)
+            z_new = self._apply_proximal_step(z, grad, step_size)
+            t_new = (1 + jnp.sqrt(1 + 4 * t**2)) / 2
+            z_accel = z_new + ((t - 1) / t_new) * (z_new - z_prev)
+            return (z_accel, z_new, t_new), z_new
+
+        z0 = jnp.zeros_like(measurement)
+        carry = (z0, z0, 1.0)
+        _, iterates = jax.lax.scan(
+            fista_step,
+            carry,
+            None,
+            length=self.config.max_iterations
+        )
+
+        return iterates
 
 
 class SolverFactory:

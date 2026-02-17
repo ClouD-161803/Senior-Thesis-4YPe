@@ -33,6 +33,14 @@ code/
 
 **NMSEExperiment**: Nonconformity = |NMSE_score - median(NMSE)|
 **RegressionExperiment**: Nonconformity = |NMSE_score - predicted_NMSE|
+**QuantileBoundsExperiment**: Per-iteration conformal upper quantile bounds (distribution-free) vs solver iteration, producing Stellato/Sambharya-style plots.
+
+```bash
+cd code
+python experiments/quantile_bounds.py --n-samples 500 --k-iterations 100 --solver ista --metric nmse --quantiles 0.3 0.8 0.9
+```
+
+Outputs a PNG with one subplot per quantile level showing empirical (test) vs conformal bound (cal) curves, plus a JSON file with all data arrays.
 
 ### CLI Arguments
 

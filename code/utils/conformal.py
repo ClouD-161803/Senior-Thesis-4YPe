@@ -94,6 +94,20 @@ class MetricFactory:
         cls._metrics[name] = metric_class
 
 
+def conformal_upper_quantile(values: np.ndarray, q: float) -> float:
+    """
+    Return the distribution-free conformal upper q-quantile bound based on calibration values.
+    Uses p = ceil(q*(n+1)). If p >= n+1, return +inf.
+    Otherwise return the p-th smallest value (1-indexed), i.e. sorted_values[p-1].
+    """
+    n = len(values)
+    p = int(np.ceil(q * (n + 1)))
+    if p >= n + 1:
+        return float('inf')
+    sorted_values = np.sort(values)
+    return float(sorted_values[p - 1])
+
+
 @dataclass
 class ConformalConfig:
     """Configuration for conformal prediction."""
