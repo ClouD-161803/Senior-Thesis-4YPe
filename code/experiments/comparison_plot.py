@@ -1,21 +1,20 @@
 """
 Generate a Stellato/Sambharya-style conformal quantile bounds comparison plot.
 
-Runs FISTA with inline metric computation (memory-efficient) for K=10000
-iterations on N=500 MNIST images, then plots quantile bounds vs iteration
-on a log-scale x-axis.
-
-Reuses the K=1000 FISTA JSON from a previous run for validation of the
-overlapping range (iterations 0..1000).
+Runs ISTA or FISTA with inline metric computation (memory-efficient) for
+K=10000 iterations on N=500 MNIST images, then plots quantile bounds vs
+iteration on a log-scale x-axis.
 
 Usage:
     cd code
-    conda run -n conformal python experiments/comparison_plot.py
+    conda run -n conformal python experiments/comparison_plot.py --solver ista
+    conda run -n conformal python experiments/comparison_plot.py --solver fista
 """
 
 import sys
 import json
 import time
+import argparse
 import numpy as np
 import jax
 import jax.numpy as jnp
@@ -39,7 +38,16 @@ RHO = 1e-4
 STEP_SIZE_FACTOR = 0.99
 CALIBRATION_RATIO = 0.5
 OUTPUT_DIR = Path('./results')
-K1000_JSON = OUTPUT_DIR / 'quantile_bounds_fista_nmse_N500_K1000.json'
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Conformal quantile bounds comparison plot",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
+    parser.add_argument('--solver', type=str, choices=['ista', 'fista'],
+                        default='ista', help='Solver algorithm')
+    return parser.parse_args()
 
 
 def setup_data():
@@ -57,9 +65,9 @@ def setup_data():
     return clean, degraded, blur_op
 
 
-def run_fista_metrics_only(degraded, clean, blur_op):
+def run_solver_metrics_only(degraded, clean, blur_op, solver_name):
     """
-    Run FISTA for K_MAX iterations, computing NMSE(dB) at each step.
+    Run solver for K_MAX iterations, computing NMSE(dB) at each step.
 
     Memory-efficient: the lax.scan body outputs a scalar metric per step
     instead of the full (H, W) iterate, so total storage is (N, K+1)
@@ -78,6 +86,25 @@ def run_fista_metrics_only(degraded, clean, blur_op):
         norm = jnp.mean(gt ** 2)
         return 10.0 * jnp.log10(mse / norm)
 
+    def proximal_step(z, grad):
+        u = z - step_size * grad
+        threshold = RHO * step_size
+        z_thresh = jnp.sign(u) * jnp.maximum(jnp.abs(u) - threshold, 0)
+        return jnp.clip(z_thresh, 0, 1)
+
+    def ista_single(measurement, ground_truth):
+        z0 = jnp.zeros_like(measurement)
+        score_0 = nmse_db(z0, ground_truth)
+
+        def ista_step(z, _):
+            grad = adjoint_op(forward_op(z) - measurement)
+            z_new = proximal_step(z, grad)
+            score = nmse_db(z_new, ground_truth)
+            return z_new, score
+
+        _, scores = jax.lax.scan(ista_step, z0, None, length=K_MAX)
+        return jnp.concatenate([score_0[None], scores])
+
     def fista_single(measurement, ground_truth):
         z0 = jnp.zeros_like(measurement)
         score_0 = nmse_db(z0, ground_truth)
@@ -85,13 +112,7 @@ def run_fista_metrics_only(degraded, clean, blur_op):
         def fista_step(carry, _):
             z, z_prev, t = carry
             grad = adjoint_op(forward_op(z) - measurement)
-            # soft-thresholding
-            u = z - step_size * grad
-            threshold = RHO * step_size
-            z_thresh = jnp.sign(u) * jnp.maximum(jnp.abs(u) - threshold, 0)
-            # box projection
-            z_new = jnp.clip(z_thresh, 0, 1)
-            # momentum
+            z_new = proximal_step(z, grad)
             t_new = (1 + jnp.sqrt(1 + 4 * t ** 2)) / 2
             z_accel = z_new + ((t - 1) / t_new) * (z_new - z_prev)
             score = nmse_db(z_new, ground_truth)
@@ -100,9 +121,12 @@ def run_fista_metrics_only(degraded, clean, blur_op):
         _, scores = jax.lax.scan(fista_step, (z0, z0, 1.0), None, length=K_MAX)
         return jnp.concatenate([score_0[None], scores])
 
-    print(f"Compiling & running FISTA (metrics-only) for K={K_MAX}, N={N_SAMPLES}...")
+    solve_single = ista_single if solver_name == 'ista' else fista_single
+
+    print(f"Compiling & running {solver_name.upper()} (metrics-only) "
+          f"for K={K_MAX}, N={N_SAMPLES}...")
     t0 = time.time()
-    batch_fn = jax.vmap(fista_single)
+    batch_fn = jax.vmap(solve_single)
     metrics = np.array(batch_fn(degraded, clean))
     elapsed = time.time() - t0
     print(f"Done in {elapsed:.1f}s. Metrics shape: {metrics.shape}")
@@ -138,16 +162,17 @@ def compute_bounds(metrics):
     return results
 
 
-def validate_against_k1000(results):
-    """Load K=1000 FISTA JSON and check the overlapping range matches."""
-    if not K1000_JSON.exists():
-        print(f"K=1000 JSON not found at {K1000_JSON}, skipping validation.")
+def validate_against_k1000(results, solver_name):
+    """Load K=1000 JSON and check the overlapping range matches."""
+    k1000_json = OUTPUT_DIR / f'quantile_bounds_{solver_name}_nmse_N500_K1000.json'
+    if not k1000_json.exists():
+        print(f"K=1000 JSON not found at {k1000_json}, skipping validation.")
         return
 
-    with open(K1000_JSON) as f:
+    with open(k1000_json) as f:
         k1000 = json.load(f)
 
-    print("\nValidating against K=1000 FISTA run:")
+    print(f"\nValidating against K=1000 {solver_name.upper()} run:")
     for q in QUANTILES:
         key = str(q)
         if key not in k1000['quantile_results']:
@@ -158,49 +183,60 @@ def validate_against_k1000(results):
         print(f"  q={q}: max |diff| in conformal bound (iters 0..1000) = {max_diff:.6f}")
 
 
-def make_plot(results):
+def make_plot(results, solver_name):
     """Generate Stellato-style comparison plot with log-scale x-axis."""
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+    plt.rcParams.update({
+        'font.size': 18,
+        'axes.titlesize': 22,
+        'axes.labelsize': 20,
+        'xtick.labelsize': 16,
+        'ytick.labelsize': 16,
+        'legend.fontsize': 16,
+        'figure.titlesize': 24,
+    })
 
     iters = np.arange(1, K_MAX + 1)  # skip k=0 for log scale
 
     n_q = len(QUANTILES)
-    fig, axes = plt.subplots(1, n_q, figsize=(6 * n_q, 5), sharey=True, squeeze=False)
+    fig, axes = plt.subplots(1, n_q, figsize=(7 * n_q, 6), sharey=True, squeeze=False)
     axes = axes[0]
 
     for i, q in enumerate(QUANTILES):
         ax = axes[i]
         r = results[q]
         ax.plot(iters, r['empirical'][1:],
-                label='Empirical (test)', linewidth=1.5)
+                label='Empirical (test)', linewidth=2)
         ax.plot(iters, r['conformal'][1:],
-                label='Conformal bound (cal)', linewidth=1.5, linestyle='--')
+                label='Conformal bound (cal)', linewidth=2, linestyle='--')
         ax.set_xscale('log')
-        ax.set_title(f'{int(100 * q)}th quantile bound', fontsize=14)
-        ax.set_xlabel('Iteration $k$', fontsize=12)
+        ax.set_title(f'{int(100 * q)}th quantile bound')
+        ax.set_xlabel('Iteration $k$')
         if i == 0:
-            ax.set_ylabel('NMSE (dB)', fontsize=12)
-        ax.legend(fontsize=10)
+            ax.set_ylabel('NMSE (dB)')
+        ax.legend()
         ax.grid(True, alpha=0.3, which='both')
+        ax.tick_params(axis='both', which='major', labelsize=16)
 
     fig.suptitle(
-        f'Conformal quantile bounds vs iteration (FISTA, NMSE)\n'
+        f'Conformal quantile bounds vs iteration ({solver_name.upper()}, NMSE)\n'
         f'$N = {N_SAMPLES}$,  $K = {K_MAX}$',
-        fontsize=16, fontweight='bold'
+        fontweight='bold'
     )
     plt.tight_layout(rect=(0, 0, 1, 0.90))
 
-    png_path = OUTPUT_DIR / f'comparison_fista_nmse_N{N_SAMPLES}_K{K_MAX}.png'
-    plt.savefig(str(png_path), dpi=150)
+    png_path = OUTPUT_DIR / f'comparison_{solver_name}_nmse_N{N_SAMPLES}_K{K_MAX}.png'
+    plt.savefig(str(png_path), dpi=200, bbox_inches='tight')
     plt.close(fig)
     print(f"Plot saved: {png_path}")
 
 
-def save_json(results):
+def save_json(results, solver_name):
     """Save full results to JSON."""
     output = {
         'config': {
-            'solver': 'fista',
+            'solver': solver_name,
             'metric': 'nmse',
             'n_samples': N_SAMPLES,
             'k_max': K_MAX,
@@ -216,16 +252,19 @@ def save_json(results):
             'coverage_q': results[q]['coverage'].tolist(),
         }
 
-    json_path = OUTPUT_DIR / f'comparison_fista_nmse_N{N_SAMPLES}_K{K_MAX}.json'
+    json_path = OUTPUT_DIR / f'comparison_{solver_name}_nmse_N{N_SAMPLES}_K{K_MAX}.json'
     with open(json_path, 'w') as f:
         json.dump(output, f, indent=2)
     print(f"JSON saved: {json_path}")
 
 
 if __name__ == '__main__':
+    args = parse_args()
+    solver_name = args.solver
+
     clean, degraded, blur_op = setup_data()
-    metrics = run_fista_metrics_only(degraded, clean, blur_op)
+    metrics = run_solver_metrics_only(degraded, clean, blur_op, solver_name)
     results = compute_bounds(metrics)
-    validate_against_k1000(results)
-    save_json(results)
-    make_plot(results)
+    validate_against_k1000(results, solver_name)
+    save_json(results, solver_name)
+    make_plot(results, solver_name)
